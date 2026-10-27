@@ -49,7 +49,10 @@ public sealed class FluentValidationFilter(IServiceProvider serviceProvider, Pro
             var problem = problemDetailsFactory.CreateValidationProblemDetails(
                 context.HttpContext, errors, StatusCodes.Status400BadRequest);
 
-            context.Result = new BadRequestObjectResult(problem);
+            context.Result = new BadRequestObjectResult(problem)
+            {
+                ContentTypes = { "application/problem+json" }
+            };
             return;
         }
 

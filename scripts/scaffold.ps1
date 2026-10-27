@@ -34,6 +34,10 @@ try {
     dotnet tool restore
     if ($LASTEXITCODE -ne 0) { throw 'dotnet tool restore failed.' }
 
+    # dotnet ef reads project metadata before building, so packages must be restored first.
+    dotnet restore PcPartsMarketplace.slnx
+    if ($LASTEXITCODE -ne 0) { throw 'dotnet restore failed.' }
+
     dotnet ef dbcontext scaffold 'Name=ConnectionStrings:PcParts' Microsoft.EntityFrameworkCore.SqlServer `
         --project PCM.DomainEntities `
         --startup-project PCM.API `

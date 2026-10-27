@@ -8,7 +8,6 @@ namespace PCM.API.Controllers;
 /// <summary>Catalog brands. Phase 1 exposes the paged list as an end-to-end pipeline check.</summary>
 [ApiController]
 [Route("api/v1/brands")]
-[Produces("application/json")]
 public sealed class BrandsController(IBrandService brandService) : ControllerBase
 {
     /// <summary>Lists brands, paged and sorted.</summary>
