@@ -1,0 +1,60 @@
+# TEMPORARY: one-off workflow to validate schema.sql on SQL Server 2025 and
+# produce the first scaffolded entities. Removed before the Phase 1 PR.
+name: bootstrap-scaffold
+
+on:
+  push:
+    branches: [phase-1-foundation]
+    paths: [Database/**, .github/workflows/bootstrap-scaffold.yml]
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    env:
+      SA_PASSWORD: Ci_Only_Passw0rd!
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Start SQL Server 2025
+        run: |
+          docker run -d --name sql -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$SA_PASSWORD" -p 1433:1433 mcr.microsoft.com/mssql/server:2025-latest
+          for i in $(seq 1 60); do
+            if docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" > /dev/null 2>&1; then echo "SQL Server is up"; exit 0; fi
+            sleep 2
+          done
+          docker logs sql; exit 1
+
+      - name: Apply schema.sql (twice, to prove it is idempotent)
+        run: |
+          docker cp Database/schema.sql sql:/tmp/schema.sql
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -d PcPartsMarketplace -Q "SELECT name FROM sys.tables ORDER BY name; SELECT * FROM dbo.Brand; SELECT Name FROM dbo.AspNetRoles;"
+
+      - name: Scaffold into a scratch project
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.10
+          mkdir -p /tmp/scaffold && cd /tmp/scaffold
+          dotnet new classlib -n PCM.DomainEntities -f net10.0 -o .
+          dotnet add package Microsoft.EntityFrameworkCore.SqlServer --version 10.0.10
+          dotnet add package Microsoft.EntityFrameworkCore.Design --version 10.0.10
+          dotnet ef dbcontext scaffold "Server=localhost;Database=PcPartsMarketplace;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" Microsoft.EntityFrameworkCore.SqlServer \
+            --context PcPartsContext --context-dir Context --output-dir DBEntities \
+            --namespace PCM.DomainEntities.DBEntities --context-namespace PCM.DomainEntities.Context \
+            --no-onconfiguring --force \
+            --table Address --table Brand --table Cart --table CartItem --table Category \
+            --table Offer --table Order --table OrderItem --table Product --table ProductImage \
+            --table ProductSpecValue --table RefreshToken --table SellerOrder --table SellerProfile \
+            --table SpecAttribute --table SpecOption --table StockMovement
+          ls -R Context DBEntities
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scaffolded
+          path: |
+            /tmp/scaffold/Context
+            /tmp/scaffold/DBEntities
