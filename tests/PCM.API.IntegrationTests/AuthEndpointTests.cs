@@ -155,6 +155,19 @@ public sealed class AuthEndpointTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task Logout_with_a_just_rotated_token_also_revokes_its_successor()
+    {
+        var first = await factory.RegisterCustomerAsync();
+        var second = (await (await RefreshAsync(first.RefreshToken)).Content.ReadFromJsonAsync<AuthResponse>(Ct))!;
+
+        // The client logs out with the token it had before the rotation.
+        await factory.CreateClient(second).PostAsJsonAsync("/api/v1/auth/logout",
+            new RefreshTokenRequest { RefreshToken = first.RefreshToken }, Ct);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(second.RefreshToken)).StatusCode);
+    }
+
+    [Fact]
     public async Task Refresh_with_an_unknown_token_returns_401()
     {
         var response = await RefreshAsync("not-a-real-token");

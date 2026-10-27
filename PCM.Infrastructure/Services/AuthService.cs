@@ -167,7 +167,12 @@ public sealed class AuthService(
             return;
         }
 
-        await unitOfWork.RefreshTokens.TryRevokeAsync(stored.Id, UtcNow(), replacedByTokenId: null, cancellationToken);
+        var now = UtcNow();
+        await unitOfWork.RefreshTokens.TryRevokeAsync(stored.Id, now, replacedByTokenId: null, cancellationToken);
+
+        // If the client rotated this token just before logging out (e.g. the UI refreshed during
+        // the logout call), the successor must die too, or the session would survive the logout.
+        await RevokeDescendantsAsync(stored, now, cancellationToken);
     }
 
     public async Task<UserDto> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default)
@@ -261,13 +266,26 @@ public sealed class AuthService(
     }
 
     /// <summary>
-    /// Reuse detection: walks the rotation chain (ReplacedByTokenId) from the reused token
-    /// and revokes every descendant that is still active, forcing whoever holds them to sign in again.
+    /// Reuse detection: a rotated token came back, so every token issued after it is revoked,
+    /// forcing whoever holds them to sign in again.
     /// </summary>
     private async Task HandleReuseAsync(RefreshToken reused, DateTime now, CancellationToken cancellationToken)
     {
-        // Re-read: in the concurrent case the successor was written by the other request.
-        var current = await unitOfWork.RefreshTokens.GetByHashAsync(reused.TokenHash, cancellationToken);
+        var revoked = await RevokeDescendantsAsync(reused, now, cancellationToken);
+
+        logger.LogWarning(
+            "Refresh token reuse detected for user {UserId} (token {TokenId}); revoked {Count} descendant token(s)",
+            reused.UserId, reused.Id, revoked);
+    }
+
+    /// <summary>
+    /// Walks the rotation chain (ReplacedByTokenId) from <paramref name="start"/> and revokes
+    /// every later token that is still active. Returns how many were revoked.
+    /// </summary>
+    private async Task<int> RevokeDescendantsAsync(RefreshToken start, DateTime now, CancellationToken cancellationToken)
+    {
+        // Re-read: in the concurrent case the successor was written by another request.
+        var current = await unitOfWork.RefreshTokens.GetByHashAsync(start.TokenHash, cancellationToken);
         var nextId = current?.ReplacedByTokenId;
         var revoked = 0;
 
@@ -290,10 +308,7 @@ public sealed class AuthService(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        logger.LogWarning(
-            "Refresh token reuse detected for user {UserId} (token {TokenId}); revoked {Count} descendant token(s)",
-            reused.UserId, reused.Id, revoked);
+        return revoked;
     }
 
     private static UserDto ToUserDto(ApplicationUser user, IReadOnlyList<string> roles, SellerStatus? sellerStatus) =>
