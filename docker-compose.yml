@@ -1,0 +1,64 @@
+# Full stack in one command:  docker compose up --build
+# Requires a .env file next to this one (copy .env.example and set SA_PASSWORD).
+#
+#   UI      http://localhost:8081
+#   API     http://localhost:8080/scalar   (health: /health)
+#   SQL     localhost,14333  (14333 so it never clashes with a local SQL Server on 1433)
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:?Set SA_PASSWORD in .env (see .env.example)}
+    ports:
+      - "14333:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SELECT 1\" || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  # One-shot job: runs Database/schema.sql (idempotent, safe on every start).
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    volumes:
+      - ./Database:/scripts:ro
+    entrypoint: ["/bin/bash", "-c", "/opt/mssql-tools18/bin/sqlcmd -S db -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -i /scripts/schema.sql"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: PCM.API/Dockerfile
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development   # exposes /scalar for reviewers
+      ConnectionStrings__PcParts: Server=db;Database=PcPartsMarketplace;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+    ports:
+      - "8080:8080"
+
+  ui:
+    build:
+      context: .
+      dockerfile: PCM.UI/Dockerfile
+    depends_on:
+      - api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Api__BaseUrl: http://api:8080/
+    ports:
+      - "8081:8080"
+
+volumes:
+  sqldata:

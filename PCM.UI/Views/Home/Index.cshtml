@@ -1,0 +1,28 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<h1 class="h3 mb-3">Brands</h1>
+<p class="text-muted">Phase 1 check: this list is loaded from <code>GET /api/v1/brands</code>.</p>
+
+@if (Model.ApiError is not null)
+{
+    <div class="alert alert-warning">@Model.ApiError</div>
+}
+else if (Model.Brands.Count == 0)
+{
+    <div class="alert alert-info">No brands yet.</div>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var brand in Model.Brands)
+        {
+            <li class="list-group-item d-flex justify-content-between">
+                <span>@brand.Name</span>
+                <span class="text-muted small">#@brand.Id</span>
+            </li>
+        }
+    </ul>
+}

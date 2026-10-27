@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".github/workflows/ci.yml" />
+    <File Path="Database/reset.sql" />
+    <File Path="Database/schema.sql" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="docker-compose.yml" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+    <File Path="scripts/scaffold.ps1" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PCM.API.IntegrationTests/PCM.API.IntegrationTests.csproj" />
+    <Project Path="tests/PCM.Infrastructure.Tests/PCM.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Project Path="PCM.DomainEntities/PCM.DomainEntities.csproj" />
+  <Project Path="PCM.Repositories/PCM.Repositories.csproj" />
+  <Project Path="PCM.Infrastructure/PCM.Infrastructure.csproj" />
+  <Project Path="PCM.API/PCM.API.csproj" />
+  <Project Path="PCM.UI/PCM.UI.csproj" />
+</Solution>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Business logic: DTOs, FluentValidation validators, manual mappings and services. -->
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PCM.Repositories\PCM.Repositories.csproj" />
+  </ItemGroup>
+
+</Project>

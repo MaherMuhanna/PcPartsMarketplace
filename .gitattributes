@@ -1,0 +1,5 @@
+# Normalize line endings so Windows (Visual Studio) and Linux (CI, Docker) agree.
+* text=auto
+*.sh text eol=lf
+*.sql text
+*.cs text diff=csharp

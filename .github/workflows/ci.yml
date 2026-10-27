@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'phase-*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # Build everything and run unit + integration tests.
+  # Integration tests start SQL Server 2025 with Testcontainers (Docker is available on ubuntu runners).
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      # Errors are re-emitted as ::error:: lines so they show up as annotations on the run.
+      - name: Restore
+        run: |
+          set -o pipefail
+          dotnet restore PcPartsMarketplace.slnx 2>&1 | tee restore.log || { grep -iE "error" restore.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
+
+      - name: Build
+        run: |
+          set -o pipefail
+          dotnet build PcPartsMarketplace.slnx --no-restore --configuration Release 2>&1 | tee build.log || { grep -iE " error " build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
+
+      - name: Test
+        run: |
+          set -o pipefail
+          dotnet test PcPartsMarketplace.slnx --no-build --configuration Release \
+            --logger "console;verbosity=normal" \
+            --collect "XPlat Code Coverage" \
+            --results-directory TestResults 2>&1 | tee test.log \
+            || { grep -iE "\[FAIL\]|failed |error|exception" test.log | sort -u | head -30 | sed 's/^/::error::/'; exit 1; }
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore
+
+  # Proves Database/schema.sql runs cleanly (and idempotently) on SQL Server 2025,
+  # and that the committed entities match it exactly (no hand edits, no forgotten re-scaffold).
+  database:
+    name: Schema and scaffold drift
+    runs-on: ubuntu-latest
+    env:
+      SA_PASSWORD: Ci_Only_Passw0rd!   # throwaway container in CI, not a real secret
+      ConnectionStrings__PcParts: Server=localhost;Database=PcPartsMarketplace;User Id=sa;Password=Ci_Only_Passw0rd!;TrustServerCertificate=True
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Start SQL Server 2025
+        run: |
+          docker run -d --name sql -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$SA_PASSWORD" -p 1433:1433 mcr.microsoft.com/mssql/server:2025-latest
+          for i in $(seq 1 60); do
+            if docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" > /dev/null 2>&1; then echo "SQL Server is up"; exit 0; fi
+            sleep 2
+          done
+          docker logs sql; exit 1
+
+      - name: Apply schema.sql twice (must be idempotent)
+        run: |
+          docker cp Database/schema.sql sql:/tmp/schema.sql
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
+
+      - name: Re-scaffold with the same script developers use
+        run: |
+          set -o pipefail
+          pwsh ./scripts/scaffold.ps1 2>&1 | tee scaffold.log || { grep -iE "error|exception|fail" scaffold.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
+
+      - name: Fail if committed entities differ from the schema
+        run: |
+          git status --porcelain PCM.DomainEntities
+          git diff --exit-code -- PCM.DomainEntities || { echo "::error::Entities are out of sync with Database/schema.sql. Run scripts/scaffold.ps1 and commit the result."; exit 1; }

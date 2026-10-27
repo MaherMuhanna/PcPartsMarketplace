@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Data access: generic + specific repositories and the Unit of Work. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\PCM.DomainEntities\PCM.DomainEntities.csproj" />
+  </ItemGroup>
+
+</Project>

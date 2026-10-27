@@ -1,0 +1,4 @@
+/* Site-wide styles. Bootstrap 5 is loaded from the CDN in _Layout.cshtml. */
+html {
+    font-size: 15px;
+}
