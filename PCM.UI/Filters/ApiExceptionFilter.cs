@@ -40,6 +40,14 @@ public sealed class ApiExceptionFilter(ILogger<ApiExceptionFilter> logger) : IAs
                 context.Result = new ViewResult { ViewName = "ApiUnavailable", StatusCode = StatusCodes.Status503ServiceUnavailable };
                 context.ExceptionHandled = true;
                 break;
+
+            // HttpClient.Timeout (15 s) elapsed: the API is up but too slow, or paused in the debugger.
+            // Not the browser closing the tab: that cancels RequestAborted, and then there is no one to answer.
+            case TaskCanceledException ex when !context.HttpContext.RequestAborted.IsCancellationRequested:
+                logger.LogWarning(ex, "The API did not answer in time");
+                context.Result = new ViewResult { ViewName = "ApiUnavailable", StatusCode = StatusCodes.Status503ServiceUnavailable };
+                context.ExceptionHandled = true;
+                break;
         }
     }
 }
