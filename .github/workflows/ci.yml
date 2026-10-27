@@ -20,28 +20,35 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
+      # Errors are re-emitted as ::error:: lines so they show up as annotations on the run.
       - name: Restore
-        run: dotnet restore PcPartsMarketplace.slnx
+        run: |
+          set -o pipefail
+          dotnet restore PcPartsMarketplace.slnx 2>&1 | tee restore.log || { grep -iE "error" restore.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
 
       - name: Build
-        run: dotnet build PcPartsMarketplace.slnx --no-restore --configuration Release
+        run: |
+          set -o pipefail
+          dotnet build PcPartsMarketplace.slnx --no-restore --configuration Release 2>&1 | tee build.log || { grep -iE " error " build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
 
       - name: Test
-        run: >
-          dotnet test PcPartsMarketplace.slnx --no-build --configuration Release
-          --logger "console;verbosity=normal"
-          --collect "XPlat Code Coverage"
-          --results-directory TestResults
+        run: |
+          set -o pipefail
+          dotnet test PcPartsMarketplace.slnx --no-build --configuration Release \
+            --logger "console;verbosity=normal" \
+            --collect "XPlat Code Coverage" \
+            --results-directory TestResults 2>&1 | tee test.log \
+            || { grep -iE "\[FAIL\]|failed |error|exception" test.log | sort -u | head -30 | sed 's/^/::error::/'; exit 1; }
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage
           path: TestResults/**/coverage.cobertura.xml
@@ -56,9 +63,9 @@ jobs:
       SA_PASSWORD: Ci_Only_Passw0rd!   # throwaway container in CI, not a real secret
       ConnectionStrings__PcParts: Server=localhost;Database=PcPartsMarketplace;User Id=sa;Password=Ci_Only_Passw0rd!;TrustServerCertificate=True
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
@@ -78,8 +85,9 @@ jobs:
           docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
 
       - name: Re-scaffold with the same script developers use
-        shell: pwsh
-        run: ./scripts/scaffold.ps1
+        run: |
+          set -o pipefail
+          pwsh ./scripts/scaffold.ps1 2>&1 | tee scaffold.log || { grep -iE "error|exception|fail" scaffold.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
 
       - name: Fail if committed entities differ from the schema
         run: |
