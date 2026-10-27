@@ -1,0 +1,52 @@
+@model AddressFormViewModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit address" : "Add address";
+}
+
+<div class="card auth-card shadow-sm">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+
+        <form asp-action="@(Model.IsEdit ? "Edit" : "Create")" asp-route-id="@Model.Id" method="post" novalidate>
+            <partial name="_FormErrors" />
+
+            <div class="mb-3">
+                <label asp-for="City" class="form-label"></label>
+                <input asp-for="City" class="form-control" />
+                <span asp-validation-for="City" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Street" class="form-label"></label>
+                <input asp-for="Street" class="form-control" />
+                <span asp-validation-for="Street" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Details" class="form-label"></label>
+                <input asp-for="Details" class="form-control" />
+                <span asp-validation-for="Details" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Phone" class="form-label"></label>
+                <input asp-for="Phone" class="form-control" placeholder="+962790000000" />
+                <span asp-validation-for="Phone" class="text-danger small"></span>
+            </div>
+
+            @if (!Model.IsEdit)
+            {
+                <div class="form-check mb-3">
+                    <input asp-for="IsDefault" class="form-check-input" />
+                    <label asp-for="IsDefault" class="form-check-label"></label>
+                    <div class="form-text">Your first address is always the default.</div>
+                </div>
+            }
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

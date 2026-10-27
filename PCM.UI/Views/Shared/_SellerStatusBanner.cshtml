@@ -1,0 +1,16 @@
+@model string
+@* Shown on every page to a seller who cannot sell yet. The status comes from the
+   cookie claims (refreshed with the tokens); "My store" always shows the live status. *@
+@{
+    var (css, text) = Model switch
+    {
+        "Pending" => ("alert-warning", "Your seller account is under review. You can sell once an admin approves it."),
+        "Suspended" => ("alert-danger", "Your seller account is suspended. Selling is disabled."),
+        "Rejected" => ("alert-secondary", "Your seller application was rejected."),
+        _ => ("alert-info", $"Seller status: {Model}.")
+    };
+}
+<div class="alert @css d-flex justify-content-between align-items-center" role="status">
+    <span>@text</span>
+    <a class="alert-link ms-3" asp-controller="Store" asp-action="Index">Details</a>
+</div>

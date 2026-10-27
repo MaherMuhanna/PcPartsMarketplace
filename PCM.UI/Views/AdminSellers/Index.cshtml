@@ -1,0 +1,150 @@
+@model AdminSellersViewModel
+@{
+    ViewData["Title"] = "Sellers";
+    var sellers = Model.Sellers;
+
+    static string BadgeFor(string status) => status switch
+    {
+        "Approved" => "text-bg-success",
+        "Pending" => "text-bg-warning",
+        "Suspended" => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Sellers</h1>
+    <span class="text-muted small">@sellers.TotalCount seller(s)</span>
+</div>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in AdminSellersViewModel.StatusTabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(tab == Model.Status ? "active" : "")" asp-action="Index" asp-route-status="@tab">@(tab ?? "All")</a>
+        </li>
+    }
+</ul>
+
+@if (sellers.Items.Count == 0)
+{
+    <div class="alert alert-info">No sellers here.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Store</th>
+                    <th>Owner</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Registered (UTC)</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var seller in sellers.Items)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@seller.StoreName</div>
+                            @if (!string.IsNullOrEmpty(seller.Description))
+                            {
+                                <div class="text-muted small text-truncate" style="max-width: 18rem;">@seller.Description</div>
+                            }
+                        </td>
+                        <td>
+                            <div>@seller.OwnerFullName</div>
+                            <div class="text-muted small">@seller.OwnerEmail</div>
+                        </td>
+                        <td class="small">@seller.ContactPhone</td>
+                        <td>
+                            <span class="badge @BadgeFor(seller.Status)">@seller.Status</span>
+                            @if (!string.IsNullOrEmpty(seller.StatusReason))
+                            {
+                                <div class="text-muted small mt-1">@seller.StatusReason</div>
+                            }
+                        </td>
+                        <td class="small">@seller.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td class="text-end text-nowrap">
+                            @switch (seller.Status)
+                            {
+                                case "Pending":
+                                    <form asp-action="Approve" asp-route-id="@seller.Id" asp-route-status="@Model.Status" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal" data-bs-target="#reasonModal"
+                                            data-action="@Url.Action("Reject", new { id = seller.Id, status = Model.Status })"
+                                            data-title="Reject @seller.StoreName">Reject</button>
+                                    break;
+                                case "Approved":
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal" data-bs-target="#reasonModal"
+                                            data-action="@Url.Action("Suspend", new { id = seller.Id, status = Model.Status })"
+                                            data-title="Suspend @seller.StoreName">Suspend</button>
+                                    break;
+                                case "Suspended":
+                                    <form asp-action="Reinstate" asp-route-id="@seller.Id" asp-route-status="@Model.Status" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-success">Reinstate</button>
+                                    </form>
+                                    break;
+                                default:
+                                    <span class="text-muted small">No actions</span>
+                                    break;
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (sellers.TotalPages > 1)
+    {
+        <nav aria-label="Seller pages">
+            <ul class="pagination">
+                @for (var p = 1; p <= sellers.TotalPages; p++)
+                {
+                    <li class="page-item @(p == sellers.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-status="@Model.Status" asp-route-page="@p">@p</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+}
+
+@* One modal for reject and suspend: the button that opens it sets the form action and title. *@
+<div class="modal fade" id="reasonModal" tabindex="-1" aria-labelledby="reasonModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content" id="reasonForm">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="reasonModalTitle">Reason</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="reason" class="form-label">Reason (shown to the seller)</label>
+                <textarea id="reason" name="reason" class="form-control" rows="3" minlength="3" maxlength="500" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Confirm</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('reasonModal').addEventListener('show.bs.modal', event => {
+            const trigger = event.relatedTarget;
+            document.getElementById('reasonForm').action = trigger.dataset.action;
+            document.getElementById('reasonModalTitle').textContent = trigger.dataset.title;
+            document.getElementById('reason').value = '';
+        });
+    </script>
+}
