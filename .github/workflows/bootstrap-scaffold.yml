@@ -7,6 +7,9 @@ on:
     branches: [phase-1-foundation]
     paths: [Database/**, .github/workflows/bootstrap-scaffold.yml]
 
+permissions:
+  contents: write
+
 jobs:
   scaffold:
     runs-on: ubuntu-latest
@@ -52,9 +55,13 @@ jobs:
             --table SpecAttribute --table SpecOption --table StockMovement
           ls -R Context DBEntities
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: scaffolded
-          path: |
-            /tmp/scaffold/Context
-            /tmp/scaffold/DBEntities
+      - name: Commit scaffolded files back to the branch
+        run: |
+          mkdir -p PCM.DomainEntities/Context PCM.DomainEntities/DBEntities
+          cp /tmp/scaffold/Context/*.cs PCM.DomainEntities/Context/
+          cp /tmp/scaffold/DBEntities/*.cs PCM.DomainEntities/DBEntities/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PCM.DomainEntities/Context PCM.DomainEntities/DBEntities
+          git diff --cached --quiet || git commit -m "Scaffold entities and PcPartsContext from Database/schema.sql"
+          git push
