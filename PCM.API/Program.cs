@@ -1,7 +1,9 @@
 using PCM.API.Filters;
 using PCM.API.Middleware;
+using PCM.API.Security;
 using PCM.DomainEntities.Context;
 using PCM.Infrastructure;
+using PCM.Infrastructure.Seeding;
 using PCM.Repositories;
 using Scalar.AspNetCore;
 using Serilog;
@@ -28,6 +30,9 @@ try
     builder.Services
         .AddDataAccess(connectionString)
         .AddInfrastructure();
+
+    // ---- Identity + JWT bearer auth, role policies, rate limiting on /auth ----
+    builder.AddApiAuth();
 
     // ---- Web API ----
     builder.Services.AddControllers(options => options.Filters.Add<FluentValidationFilter>());
@@ -69,8 +74,18 @@ try
         app.UseHttpsRedirection();
     }
 
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.UseRateLimiter();
+
     app.MapControllers();
     app.MapHealthChecks("/health");
+
+    // Demo accounts for local runs and Docker (Development only; see README for the logins).
+    if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Seed:DemoUsers"))
+    {
+        await SeedDemoUsersAsync(app);
+    }
 
     await app.RunAsync();
 }
@@ -82,6 +97,21 @@ catch (Exception ex) when (ex is not HostAbortedException) // HostAbortedExcepti
 finally
 {
     await Log.CloseAndFlushAsync();
+}
+
+static async Task SeedDemoUsersAsync(WebApplication app)
+{
+    try
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<DemoUserSeeder>();
+        await seeder.SeedAsync(app.Configuration["Seed:DemoPassword"] ?? string.Empty);
+    }
+    catch (Exception ex)
+    {
+        // A missing database should not stop the API from starting; /health will report it.
+        Log.Error(ex, "Seeding demo users failed");
+    }
 }
 
 /// <summary>Exposed for WebApplicationFactory in the integration tests.</summary>

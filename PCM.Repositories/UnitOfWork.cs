@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using PCM.DomainEntities.Context;
 using PCM.Repositories.IRepository;
@@ -9,11 +10,26 @@ namespace PCM.Repositories;
 /// EF Core Unit of Work. Repositories are created lazily on first use and all
 /// share the same scoped <see cref="PcPartsContext"/>.
 /// </summary>
-public sealed class UnitOfWork(PcPartsContext context) : IUnitOfWork
+/// <remarks>
+/// <see cref="AuthDbContext"/> (Identity) and <see cref="PcPartsContext"/> use the
+/// same scoped SqlConnection (see <see cref="DependencyInjection.AddDataAccess"/>).
+/// A transaction started here is enlisted in both contexts, so a business operation
+/// such as "create user + seller profile" commits or rolls back as one unit.
+/// </remarks>
+public sealed class UnitOfWork(PcPartsContext context, AuthDbContext authContext) : IUnitOfWork
 {
     private IBrandRepository? _brands;
+    private ISellerProfileRepository? _sellerProfiles;
+    private IAddressRepository? _addresses;
+    private IRefreshTokenRepository? _refreshTokens;
 
     public IBrandRepository Brands => _brands ??= new BrandRepository(context);
+
+    public ISellerProfileRepository SellerProfiles => _sellerProfiles ??= new SellerProfileRepository(context);
+
+    public IAddressRepository Addresses => _addresses ??= new AddressRepository(context);
+
+    public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
@@ -21,17 +37,48 @@ public sealed class UnitOfWork(PcPartsContext context) : IUnitOfWork
     public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        return new EfTransaction(transaction);
+
+        // Enlist the Identity context in the same database transaction.
+        await authContext.Database.UseTransactionAsync(transaction.GetDbTransaction(), cancellationToken);
+
+        return new EfTransaction(transaction, authContext);
     }
 
-    private sealed class EfTransaction(IDbContextTransaction transaction) : IUnitOfWorkTransaction
+    private sealed class EfTransaction(IDbContextTransaction transaction, AuthDbContext authContext) : IUnitOfWorkTransaction
     {
-        public Task CommitAsync(CancellationToken cancellationToken = default) =>
-            transaction.CommitAsync(cancellationToken);
+        private bool _released;
 
-        public Task RollbackAsync(CancellationToken cancellationToken = default) =>
-            transaction.RollbackAsync(cancellationToken);
+        public async Task CommitAsync(CancellationToken cancellationToken = default)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            await ReleaseAuthContextAsync();
+        }
 
-        public ValueTask DisposeAsync() => transaction.DisposeAsync();
+        public async Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            await ReleaseAuthContextAsync();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await ReleaseAuthContextAsync();
+            await transaction.DisposeAsync();
+        }
+
+        /// <summary>
+        /// Detaches the Identity context from the finished transaction, so later
+        /// UserManager calls in the same request run outside it.
+        /// </summary>
+        private async Task ReleaseAuthContextAsync()
+        {
+            if (_released)
+            {
+                return;
+            }
+
+            _released = true;
+            await authContext.Database.UseTransactionAsync(null);
+        }
     }
 }

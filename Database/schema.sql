@@ -112,8 +112,8 @@ GO
 
 CREATE TABLE dbo.AspNetUserLogins
 (
-    LoginProvider       nvarchar(450) NOT NULL,
-    ProviderKey         nvarchar(450) NOT NULL,
+    LoginProvider       nvarchar(128) NOT NULL,  -- 128 = Identity MaxLengthForKeys (keeps the PK under 900 bytes)
+    ProviderKey         nvarchar(128) NOT NULL,
     ProviderDisplayName nvarchar(max) NULL,
     UserId              int           NOT NULL,
     CONSTRAINT PK_AspNetUserLogins PRIMARY KEY (LoginProvider, ProviderKey),
@@ -136,8 +136,8 @@ GO
 CREATE TABLE dbo.AspNetUserTokens
 (
     UserId        int           NOT NULL,
-    LoginProvider nvarchar(450) NOT NULL,
-    Name          nvarchar(450) NOT NULL,
+    LoginProvider nvarchar(128) NOT NULL,  -- 128 = Identity MaxLengthForKeys (keeps the PK under 900 bytes)
+    Name          nvarchar(128) NOT NULL,
     Value         nvarchar(max) NULL,
     CONSTRAINT PK_AspNetUserTokens PRIMARY KEY (UserId, LoginProvider, Name),
     CONSTRAINT FK_AspNetUserTokens_AspNetUsers_UserId FOREIGN KEY (UserId) REFERENCES dbo.AspNetUsers (Id) ON DELETE CASCADE

@@ -3,11 +3,13 @@
   <!--
     Scaffolded entities (DBEntities/) and PcPartsContext (Context/) generated from
     Database/schema.sql. Generated files are never edited by hand; custom code lives
-    in separate partial-class files (*.Partial.cs) and in Common/, Enums/, Interceptors/.
+    in separate partial-class files (*.Partial.cs) and in Common/, Enums/, Identity/, Interceptors/.
   -->
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <!-- ASP.NET Core Identity EF stores: ApplicationUser, ApplicationRole and AuthDbContext. -->
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
   </ItemGroup>
 
 </Project>

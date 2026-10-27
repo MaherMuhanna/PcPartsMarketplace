@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PCM.Infrastructure.Exceptions;
 
@@ -18,10 +19,14 @@ public sealed class GlobalExceptionHandler(
     {
         var (status, title, detail) = exception switch
         {
+            UnauthorizedException e => (StatusCodes.Status401Unauthorized, "Unauthorized", e.Message),
             NotFoundException e => (StatusCodes.Status404NotFound, "Resource not found", e.Message),
             ConflictException e => (StatusCodes.Status409Conflict, "Conflict", e.Message),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Conflict",
                 "The resource was changed by another request. Reload and try again."),
+            // A unique index caught a duplicate that slipped past the service pre-check (race).
+            DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } } => (StatusCodes.Status409Conflict, "Conflict",
+                "A record with the same unique value already exists."),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred", null)
         };
 

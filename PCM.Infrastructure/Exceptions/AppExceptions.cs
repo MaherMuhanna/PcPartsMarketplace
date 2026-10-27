@@ -8,3 +8,6 @@ public sealed class NotFoundException(string message) : Exception(message);
 
 /// <summary>Request conflicts with the current state, e.g. stock or price changed (409).</summary>
 public sealed class ConflictException(string message) : Exception(message);
+
+/// <summary>Credentials or token are invalid, expired, revoked, or the account is locked (401).</summary>
+public sealed class UnauthorizedException(string message) : Exception(message);

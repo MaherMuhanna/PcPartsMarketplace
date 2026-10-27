@@ -36,6 +36,12 @@ public sealed partial class ApiFactory : WebApplicationFactory<Program>, IAsyncL
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:PcParts", ConnectionString);
+
+        // Throwaway key for the in-memory API (never used outside tests).
+        builder.UseSetting("Jwt:SigningKey", "integration-tests-only-signing-key-0123456789");
+
+        // Every test shares one client "IP"; lift the per-IP auth limit so tests do not hit 429.
+        builder.UseSetting("RateLimiting:AuthPermitPerMinute", "100000");
     }
 
     public override async ValueTask DisposeAsync()
