@@ -45,6 +45,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development   # exposes /scalar for reviewers
       ConnectionStrings__PcParts: Server=db;Database=PcPartsMarketplace;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      # Optional: without it the API generates a random key per start (Development only).
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-}
     ports:
       - "8080:8080"
 

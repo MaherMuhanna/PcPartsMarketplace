@@ -1,3 +1,7 @@
+@{
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var sellerStatus = User.FindFirstValue(AppClaimTypes.SellerStatus);
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,14 +13,77 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
     <header>
-        <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+        <nav class="navbar navbar-expand-md navbar-dark bg-dark">
             <div class="container">
                 <a class="navbar-brand fw-semibold" asp-controller="Home" asp-action="Index">PC Parts Marketplace</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav ms-auto align-items-md-center">
+                        @if (isSignedIn)
+                        {
+                            @if (User.IsInRole(Roles.Admin))
+                            {
+                                <li class="nav-item"><a class="nav-link" asp-controller="AdminSellers" asp-action="Index">Sellers</a></li>
+                            }
+                            @if (User.IsInRole(Roles.Seller))
+                            {
+                                <li class="nav-item"><a class="nav-link" asp-controller="Store" asp-action="Index">My store</a></li>
+                            }
+                            @if (User.IsInRole(Roles.Customer))
+                            {
+                                <li class="nav-item"><a class="nav-link" asp-controller="Addresses" asp-action="Index">My addresses</a></li>
+                            }
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    @User.Identity!.Name
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><span class="dropdown-item-text small text-muted">@User.FindFirstValue(AppClaimTypes.Email)</span></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                            <button type="submit" class="dropdown-item">Sign out</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Login">Sign in</a></li>
+                            <li class="nav-item"><a class="btn btn-outline-light btn-sm ms-md-2" asp-controller="Account" asp-action="Register">Create account</a></li>
+                        }
+                    </ul>
+                </div>
             </div>
         </nav>
     </header>
 
     <main class="container py-4 flex-grow-1">
+        @if (User.IsInRole(Roles.Seller) && sellerStatus is not null && sellerStatus != "Approved")
+        {
+            <partial name="_SellerStatusBanner" model="sellerStatus" />
+        }
+
+        @if (TempData["Success"] is string success)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @success
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["Error"] is string error)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @error
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
         @RenderBody()
     </main>
 

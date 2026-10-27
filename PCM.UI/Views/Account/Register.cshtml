@@ -1,0 +1,94 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Create account";
+    var isSeller = Model.AccountType == AccountType.Seller;
+}
+
+<div class="card auth-card mx-auto shadow-sm">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-3">Create account</h1>
+
+        <ul class="nav nav-pills nav-fill mb-3" role="tablist">
+            <li class="nav-item">
+                <button type="button" class="nav-link @(isSeller ? "" : "active")" data-account-type="Customer">I want to buy</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link @(isSeller ? "active" : "")" data-account-type="Seller">I want to sell</button>
+            </li>
+        </ul>
+
+        <form asp-action="Register" method="post" novalidate>
+            <partial name="_FormErrors" />
+            <input type="hidden" asp-for="AccountType" id="AccountType" />
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" autocomplete="name" />
+                <span asp-validation-for="FullName" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="email" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+                <div class="form-text mt-1">At least 8 characters, with an upper-case letter, a lower-case letter and a digit.</div>
+            </div>
+
+            <fieldset id="sellerFields" class="border-top pt-3 mb-3" hidden="@(!isSeller)">
+                <legend class="h6">Your store</legend>
+
+                <div class="mb-3">
+                    <label asp-for="StoreName" class="form-label"></label>
+                    <input asp-for="StoreName" class="form-control" />
+                    <span asp-validation-for="StoreName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-1">
+                    <label asp-for="ContactPhone" class="form-label"></label>
+                    <input asp-for="ContactPhone" class="form-control" placeholder="+962790000000" />
+                    <span asp-validation-for="ContactPhone" class="text-danger small"></span>
+                </div>
+                <div class="form-text">An admin reviews every new store before it can sell.</div>
+            </fieldset>
+
+            <button type="submit" class="btn btn-primary w-100">Create account</button>
+        </form>
+
+        <p class="text-muted small mt-3 mb-0">
+            Already registered? <a asp-action="Login">Sign in</a>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Tabs switch the account type and show the store fields for sellers.
+        document.querySelectorAll('[data-account-type]').forEach(button => {
+            button.addEventListener('click', () => {
+                const type = button.dataset.accountType;
+                document.getElementById('AccountType').value = type;
+                document.getElementById('sellerFields').hidden = type !== 'Seller';
+                document.querySelectorAll('[data-account-type]').forEach(b => b.classList.toggle('active', b === button));
+            });
+        });
+    </script>
+}

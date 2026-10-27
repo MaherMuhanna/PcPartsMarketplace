@@ -1,0 +1,74 @@
+@model StoreViewModel
+@{
+    ViewData["Title"] = "My store";
+    var profile = Model.Profile!;
+    var badge = profile.Status switch
+    {
+        "Approved" => "text-bg-success",
+        "Pending" => "text-bg-warning",
+        "Suspended" => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+}
+
+<h1 class="h3 mb-3">My store</h1>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5">@profile.StoreName</h2>
+                <p class="mb-2">Status: <span class="badge @badge">@profile.Status</span></p>
+
+                @switch (profile.Status)
+                {
+                    case "Pending":
+                        <p class="text-muted mb-0">An admin is reviewing your store. You can sell once it is approved.</p>
+                        break;
+                    case "Approved":
+                        <p class="text-muted mb-0">Approved on @profile.ApprovedAt?.ToString("yyyy-MM-dd") (UTC). Selling tools arrive in a later phase.</p>
+                        break;
+                    case "Suspended":
+                        <p class="text-danger mb-0">Suspended. Reason: @profile.StatusReason</p>
+                        break;
+                    case "Rejected":
+                        <p class="text-muted mb-0">Rejected. Reason: @profile.StatusReason</p>
+                        break;
+                }
+
+                <p class="text-muted small mt-3 mb-0">Registered @profile.CreatedAt.ToString("yyyy-MM-dd") (UTC)</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5">Store details</h2>
+                <form asp-action="Index" method="post" novalidate>
+                    <partial name="_FormErrors" />
+
+                    <div class="mb-3">
+                        <label class="form-label" for="storeName">Store name</label>
+                        <input id="storeName" class="form-control" value="@profile.StoreName" disabled />
+                        <div class="form-text">The store name is fixed after registration.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ContactPhone" class="form-label"></label>
+                        <input asp-for="ContactPhone" class="form-control" placeholder="+962790000000" />
+                        <span asp-validation-for="ContactPhone" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
