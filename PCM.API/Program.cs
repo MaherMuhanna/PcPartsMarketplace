@@ -1,5 +1,6 @@
 using PCM.API.Filters;
 using PCM.API.Middleware;
+using PCM.API.OpenApi;
 using PCM.API.Security;
 using PCM.DomainEntities.Context;
 using PCM.Infrastructure;
@@ -49,7 +50,8 @@ try
     });
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-    builder.Services.AddOpenApi();
+    // OpenAPI document (/openapi/v1.json) with the JWT bearer scheme, rendered by Scalar at /scalar.
+    builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<PcPartsContext>("database");
@@ -65,7 +67,9 @@ try
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();                   // /openapi/v1.json
-        app.MapScalarApiReference();        // /scalar
+        app.MapScalarApiReference(options => options   // /scalar
+            .WithTitle("PC Parts Marketplace API")
+            .AddPreferredSecuritySchemes(BearerSecuritySchemeTransformer.SchemeName));
     }
 
     // Inside Docker the API serves plain HTTP behind the compose network.
