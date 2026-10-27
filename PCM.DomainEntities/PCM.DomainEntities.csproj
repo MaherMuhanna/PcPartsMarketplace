@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Scaffolded entities (DBEntities/) and PcPartsContext (Context/) generated from
+    Database/schema.sql. Generated files are never edited by hand; custom code lives
+    in separate partial-class files (*.Partial.cs) and in Common/, Enums/, Interceptors/.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+
+</Project>
