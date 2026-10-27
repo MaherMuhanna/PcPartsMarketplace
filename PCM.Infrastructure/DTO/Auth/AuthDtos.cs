@@ -40,8 +40,10 @@ public sealed record RefreshTokenRequest
     public string RefreshToken { get; init; } = string.Empty;
 }
 
-/// <summary>The signed-in user, as returned by login, refresh and GET /auth/me.</summary>
-/// <param name="SellerStatus">Pending / Approved / Rejected / Suspended for sellers; null otherwise.</param>
+/// <summary>
+/// The signed-in user, as returned by login, refresh and GET /auth/me.
+/// SellerStatus is Pending / Approved / Rejected / Suspended for sellers, null otherwise.
+/// </summary>
 public sealed record UserDto(
     int Id,
     string FullName,

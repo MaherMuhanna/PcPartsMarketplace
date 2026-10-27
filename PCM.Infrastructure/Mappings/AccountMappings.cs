@@ -14,8 +14,7 @@ public static class AccountMappings
         new(profile.Id, profile.StoreName, profile.Description, profile.ContactPhone,
             profile.Status, profile.StatusReason, profile.ApprovedAt, profile.CreatedAt);
 
-    /// <param name="ownerFullName">From AspNetUsers (a different DbContext), hence passed in.</param>
-    /// <param name="ownerEmail">From AspNetUsers.</param>
+    /// <summary>Owner name and email come from AspNetUsers (a different DbContext), hence passed in.</summary>
     public static SellerAdminDto ToAdminDto(this SellerProfile profile, string ownerFullName, string ownerEmail) =>
         new(profile.Id, profile.UserId, ownerFullName, ownerEmail, profile.StoreName, profile.Description,
             profile.ContactPhone, profile.Status, profile.StatusReason, profile.ApprovedAt, profile.CreatedAt);
