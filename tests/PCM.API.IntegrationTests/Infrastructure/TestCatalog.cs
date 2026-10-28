@@ -87,7 +87,7 @@ public static class TestCatalog
     {
         var response = body is null
             ? await client.PostAsync(url, null, Ct)
-            : await client.PostAsJsonAsync(url, body, body.GetType(), Ct);
+            : await client.PostAsJsonAsync(url, body, Ct);   // declared as object: serialized with its runtime type
 
         Assert.True(response.IsSuccessStatusCode, $"POST {url} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync(Ct)}");
         return (await response.Content.ReadFromJsonAsync<T>(Ct))!;
@@ -95,7 +95,7 @@ public static class TestCatalog
 
     public static async Task<T> PutAsync<T>(HttpClient client, string url, object body)
     {
-        var response = await client.PutAsJsonAsync(url, body, body.GetType(), Ct);
+        var response = await client.PutAsJsonAsync(url, body, Ct);
 
         Assert.True(response.IsSuccessStatusCode, $"PUT {url} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync(Ct)}");
         return (await response.Content.ReadFromJsonAsync<T>(Ct))!;

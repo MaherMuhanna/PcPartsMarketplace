@@ -45,7 +45,7 @@ public sealed class CatalogQuery
             if (TrySplitRangeKey(key, out var baseKey, out var isMin))
             {
                 var value = values.FirstOrDefault()?.Trim() ?? string.Empty;
-                var range = ranges.GetValueOrDefault(baseKey, (string.Empty, string.Empty));
+                (string Min, string Max) range = ranges.GetValueOrDefault(baseKey, (string.Empty, string.Empty));
                 ranges[baseKey] = isMin ? (value, range.Max) : (range.Min, value);
                 continue;
             }
