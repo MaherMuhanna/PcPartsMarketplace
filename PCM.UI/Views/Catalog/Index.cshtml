@@ -102,18 +102,18 @@
                         </fieldset>
                     }
 
-                    @foreach (var attribute in filters.Attributes)
+                    @foreach (var spec in filters.Attributes)
                     {
                         <fieldset class="mb-3">
-                            <legend class="h6">@(attribute.Unit is null ? attribute.Name : $"{attribute.Name} ({attribute.Unit})")</legend>
-                            @if (attribute.DataType == "Enum")
+                            <legend class="h6">@(spec.Unit is null ? spec.Name : $"{spec.Name} ({spec.Unit})")</legend>
+                            @if (spec.DataType == "Enum")
                             {
-                                var selected = query.GetSet(attribute.Slug);
-                                foreach (var option in attribute.Options.Where(o => o.Count > 0 || selected.Contains(o.Slug)))
+                                var selected = query.GetSet(spec.Slug);
+                                foreach (var option in spec.Options.Where(o => o.Count > 0 || selected.Contains(o.Slug)))
                                 {
-                                    var id = $"{attribute.Slug}-{option.Slug}";
+                                    var id = $"{spec.Slug}-{option.Slug}";
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="@attribute.Slug" value="@option.Slug" id="@id" checked="@selected.Contains(option.Slug)" />
+                                        <input class="form-check-input" type="checkbox" name="@spec.Slug" value="@option.Slug" id="@id" checked="@selected.Contains(option.Slug)" />
                                         <label class="form-check-label d-flex justify-content-between" for="@id">
                                             <span>@option.Value</span><span class="text-muted small">@option.Count</span>
                                         </label>
@@ -122,12 +122,12 @@
                             }
                             else
                             {
-                                var (min, max) = query.GetRange(attribute.Slug);
+                                var (min, max) = query.GetRange(spec.Slug);
                                 <div class="d-flex gap-2">
-                                    <input type="number" name="@(attribute.Slug)@CatalogQuery.RangeMinSuffix" value="@min" class="form-control form-control-sm"
-                                           placeholder="@attribute.Min?.ToInputNumber()" min="0" step="any" aria-label="Minimum @attribute.Name" />
-                                    <input type="number" name="@(attribute.Slug)@CatalogQuery.RangeMaxSuffix" value="@max" class="form-control form-control-sm"
-                                           placeholder="@attribute.Max?.ToInputNumber()" min="0" step="any" aria-label="Maximum @attribute.Name" />
+                                    <input type="number" name="@(spec.Slug)@CatalogQuery.RangeMinSuffix" value="@min" class="form-control form-control-sm"
+                                           placeholder="@spec.Min?.ToInputNumber()" min="0" step="any" aria-label="Minimum @spec.Name" />
+                                    <input type="number" name="@(spec.Slug)@CatalogQuery.RangeMaxSuffix" value="@max" class="form-control form-control-sm"
+                                           placeholder="@spec.Max?.ToInputNumber()" min="0" step="any" aria-label="Maximum @spec.Name" />
                                 </div>
                             }
                         </fieldset>
@@ -195,20 +195,20 @@
                         Price @(query.Get("minPrice") ?? "0") to @(query.Get("maxPrice") ?? "any") &times;
                     </a>
                 }
-                @foreach (var attribute in filters.Attributes.Where(a => query.Has(a.Slug)))
+                @foreach (var spec in filters.Attributes.Where(a => query.Has(a.Slug)))
                 {
-                    if (attribute.DataType == "Enum")
+                    if (spec.DataType == "Enum")
                     {
-                        foreach (var option in attribute.Options.Where(o => query.GetSet(attribute.Slug).Contains(o.Slug)))
+                        foreach (var option in spec.Options.Where(o => query.GetSet(spec.Slug).Contains(o.Slug)))
                         {
-                            <a class="badge rounded-pill text-bg-light border filter-chip" href="@WithoutValue(attribute.Slug, option.Slug)">@attribute.Name: @option.Value &times;</a>
+                            <a class="badge rounded-pill text-bg-light border filter-chip" href="@WithoutValue(spec.Slug, option.Slug)">@spec.Name: @option.Value &times;</a>
                         }
                     }
                     else
                     {
-                        var (min, max) = query.GetRange(attribute.Slug);
-                        <a class="badge rounded-pill text-bg-light border filter-chip" href="@query.Without(attribute.Slug, "page").ToUrl(path)">
-                            @attribute.Name: @(min.Length == 0 ? "any" : min) to @(max.Length == 0 ? "any" : max) @attribute.Unit &times;
+                        var (min, max) = query.GetRange(spec.Slug);
+                        <a class="badge rounded-pill text-bg-light border filter-chip" href="@query.Without(spec.Slug, "page").ToUrl(path)">
+                            @spec.Name: @(min.Length == 0 ? "any" : min) to @(max.Length == 0 ? "any" : max) @spec.Unit &times;
                         </a>
                     }
                 }

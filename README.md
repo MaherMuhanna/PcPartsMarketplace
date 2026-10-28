@@ -11,7 +11,7 @@ Multi-vendor marketplace for computer parts (RAM, GPUs, CPUs, storage): an ASP.N
 ## Solution layout
 
 ```
-Database/               schema.sql (source of truth for the database), reset.sql
+Database/               schema.sql (tables, source of truth), seed.sql (roles, brands, catalog), reset.sql
 PCM.DomainEntities/     Scaffolded entities + PcPartsContext, audit/soft-delete interceptor, enums
 PCM.Repositories/       Generic async repository, specific repositories, Unit of Work
 PCM.Infrastructure/     DTOs, validators, manual mappings, services (business logic)
@@ -27,11 +27,12 @@ Dependencies point one way: `API -> Infrastructure -> Repositories -> DomainEnti
 
 Prerequisites: .NET 10 SDK, SQL Server (any edition, 2022+).
 
-1. Create the database:
+1. Create the database, then load the seed data (roles, 17 brands, 7 categories, 37 products):
    ```powershell
    sqlcmd -S localhost -E -C -i Database\schema.sql
+   sqlcmd -S localhost -E -C -i Database\seed.sql
    ```
-   (or open `Database/schema.sql` in SSMS and press F5). The script is idempotent; to rebuild from scratch run `Database/reset.sql` first.
+   (or open each file in SSMS and press F5, schema first). Both scripts are idempotent; to rebuild from scratch run `Database/reset.sql` first.
 
 2. Store the connection string in user-secrets (never in appsettings):
    ```powershell
@@ -59,9 +60,11 @@ Created on API startup when the environment is Development (`Seed:DemoUsers`). P
 | Email | Role | Notes |
 | --- | --- | --- |
 | admin@pcm.local | Admin | Approves, rejects, suspends and reinstates sellers |
-| seller1@pcm.local | Seller | Store "Tech Hub", Approved |
+| seller1@pcm.local | Seller | Store "Tech Hub", Approved; has one Pending and one Rejected product proposal |
 | seller2@pcm.local | Seller | Store "Byte Corner", Pending (shows the review banner) |
 | customer@pcm.local | Customer | Has one default address |
+
+The two demo proposals need the catalog from `seed.sql`; if the API started before you ran it, restart the API.
 
 ## Run with Docker (one command)
 
@@ -78,12 +81,12 @@ UI on http://localhost:8081, API docs on http://localhost:8080/scalar. SQL Serve
 dotnet test PcPartsMarketplace.slnx
 ```
 
-Integration tests start a disposable SQL Server 2025 container (Docker must be running) and build it from the same `schema.sql`.
+Integration tests start a disposable SQL Server 2025 container (Docker must be running) and build it from the same `schema.sql` and `seed.sql`.
 
 ## Database-First workflow
 
 1. Change `Database/schema.sql`.
-2. Apply it (`reset.sql` then `schema.sql` in development).
+2. Apply it (`reset.sql`, then `schema.sql`, then `seed.sql` in development).
 3. Run `pwsh ./scripts/scaffold.ps1` to regenerate `PCM.DomainEntities/Context/PcPartsContext.cs` and `DBEntities/`.
 4. Commit both. CI re-scaffolds from the schema and fails if the committed entities differ.
 
@@ -110,6 +113,32 @@ Generated files are never edited by hand; custom code lives in partial classes (
 - **Rate limiting**: 10 requests per minute per IP on login, register and refresh (429 ProblemDetails).
 - **UI session**: the MVC app keeps both tokens inside its encrypted, HttpOnly auth cookie (never in browser storage). A `DelegatingHandler` adds the bearer token to every API call, refreshes it shortly before it expires (or after a 401), and signs the user out if the refresh fails.
 
+## Catalog
+
+| Endpoint | Who | Notes |
+| --- | --- | --- |
+| `GET /api/v1/categories` | Anyone | Category tree; products live on leaves |
+| `GET /api/v1/categories/{id}/attributes` | Anyone | Attributes of a category with option ids (for product forms) |
+| `GET /api/v1/products` | Anyone | Search, filters, sort, paging (see below) |
+| `GET /api/v1/products/filters?category=` | Anyone | Sidebar data: breadcrumb, subcategories, brand counts, option counts, number ranges |
+| `GET /api/v1/products/{id}`, `GET /api/v1/products/by-slug/{slug}` | Anyone | Product page: specs, images, offers (cheapest first) |
+| `/api/v1/admin/categories` (POST, PUT, DELETE), `.../{id}/attributes` | Admin | 409 when a rule would break (e.g. deleting a used attribute) |
+| `/api/v1/admin/attributes/{id}/options` (POST, PUT, DELETE) | Admin | Enum attributes only |
+| `/api/v1/admin/brands` (POST, PUT, DELETE) | Admin | Brands with products cannot be deleted |
+| `/api/v1/admin/products` (GET, POST, PUT), `{id}/activate, deactivate, approve, reject` | Admin | Review queue: `?status=Pending` |
+| `/api/v1/seller/products/proposals` (GET, POST, PUT) | Approved seller | Own proposals only; a rejected one can be fixed and resubmitted |
+
+Search URL, built from slugs so links are readable and shareable:
+
+```
+/api/v1/products?category=ram&brand=corsair,kingston&memory-type=ddr5&capacity=32-64&sort=price
+```
+
+- `q` keyword (name or model number), `category` (a parent includes its subcategories), `brand`, `minPrice`, `maxPrice`, `sort` (`newest`, `name`, `price`, `-price`), `page`, `pageSize`.
+- Any other key is a spec filter named after an attribute slug of the leaf category. Enum: comma-separated option slugs (OR). Number: `min-max`, `min-` or `-max`. Different attributes combine with AND.
+- Attributes are typed (Text, Number, Enum), so a new category needs rows, not schema changes. Number filters run as range queries on `ProductSpecValue.NumberValue` (indexed).
+- Seller proposals are `Product` rows with `Status = Pending`; only Approved and active products are public.
+
 ## Design decisions (so far)
 
 - **Database-First from a versioned script**: the schema is reviewed as SQL (types, constraints, filtered indexes) and the entities are generated from it.
@@ -123,7 +152,7 @@ Generated files are never edited by hand; custom code lives in partial classes (
 
 1. ~~Foundation~~ ✔
 2. ~~Auth: Identity, JWT + refresh tokens, roles, seller approval~~ ✔
-3. Catalog: categories, specs, products, search and filters, seed data
+3. ~~Catalog: categories, specs, products, search and filters, seed data~~ ✔
 4. Offers and inventory
 5. Cart and transactional checkout
 6. MVC UI
