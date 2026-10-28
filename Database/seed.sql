@@ -478,5 +478,9 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT 'PcPartsMarketplace seed data is ready.';
+-- Only claim success when the seed actually ran against the right database.
+IF DB_NAME() = N'PcPartsMarketplace' AND OBJECT_ID(N'dbo.Product', N'U') IS NOT NULL
+    PRINT 'PcPartsMarketplace seed data is ready.';
+ELSE
+    PRINT 'Seed did NOT run: run Database/schema.sql first, then this script again.';
 GO
