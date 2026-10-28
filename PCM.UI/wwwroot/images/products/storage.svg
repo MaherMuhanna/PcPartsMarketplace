@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Storage">
+  <rect width="400" height="300" rx="16" fill="#eef2f7"/>
+  <rect x="70" y="105" width="260" height="70" rx="8" fill="#cbd5e1" stroke="#1e3a5f" stroke-width="4"/>
+  <rect x="90" y="120" width="70" height="40" rx="4" fill="#94a3b8" stroke="#1e3a5f" stroke-width="4"/>
+  <rect x="175" y="120" width="50" height="40" rx="4" fill="#94a3b8" stroke="#1e3a5f" stroke-width="4"/>
+  <rect x="240" y="120" width="50" height="40" rx="4" fill="#94a3b8" stroke="#1e3a5f" stroke-width="4"/>
+  <rect x="330" y="118" width="16" height="44" fill="#d4a017" stroke="#1e3a5f" stroke-width="4"/>
+  <circle cx="62" cy="140" r="7" fill="#eef2f7" stroke="#1e3a5f" stroke-width="4"/>
+  <text x="200" y="272" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="600" fill="#334155">Storage</text>
+</svg>

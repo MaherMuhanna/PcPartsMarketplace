@@ -3,26 +3,44 @@
     ViewData["Title"] = "Home";
 }
 
-<h1 class="h3 mb-3">Brands</h1>
-<p class="text-muted">Phase 1 check: this list is loaded from <code>GET /api/v1/brands</code>.</p>
+<section class="hero rounded-3 p-4 p-md-5 mb-4">
+    <h1 class="display-6 fw-semibold mb-2">PC parts from trusted sellers</h1>
+    <p class="lead mb-4">Compare offers on CPUs, graphics cards, memory and more. Pay cash on delivery.</p>
+    <form asp-controller="Catalog" asp-action="Index" method="get" class="d-flex gap-2 hero-search" role="search">
+        <input type="search" name="q" class="form-control form-control-lg" placeholder="Search by name or model number" aria-label="Search products" maxlength="100" />
+        <button type="submit" class="btn btn-primary btn-lg">Search</button>
+    </form>
+</section>
 
-@if (Model.ApiError is not null)
+<h2 class="h4 mb-3">Shop by category</h2>
+<div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3 mb-5">
+    @foreach (var category in Model.Categories)
+    {
+        <div class="col">
+            <a class="card h-100 text-center text-decoration-none category-tile" href="@CatalogQuery.Empty.With("category", category.Slug).ToUrl(Url.Action("Index", "Catalog")!)">
+                <img src="/images/products/@(category.Slug).svg" alt="" class="card-img-top p-3" onerror="this.src='@DisplayExtensions.PlaceholderImage'" />
+                <div class="card-body pt-0">
+                    <span class="fw-semibold text-body">@category.Name</span>
+                </div>
+            </a>
+        </div>
+    }
+</div>
+
+<div class="d-flex justify-content-between align-items-baseline mb-3">
+    <h2 class="h4 mb-0">New in the catalog</h2>
+    <a asp-controller="Catalog" asp-action="Index">See all products</a>
+</div>
+@if (Model.NewestProducts.Count == 0)
 {
-    <div class="alert alert-warning">@Model.ApiError</div>
-}
-else if (Model.Brands.Count == 0)
-{
-    <div class="alert alert-info">No brands yet.</div>
+    <div class="alert alert-info">The catalog is empty. Run <code>Database/seed.sql</code> to add the demo products.</div>
 }
 else
 {
-    <ul class="list-group">
-        @foreach (var brand in Model.Brands)
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+        @foreach (var product in Model.NewestProducts)
         {
-            <li class="list-group-item d-flex justify-content-between">
-                <span>@brand.Name</span>
-                <span class="text-muted small">#@brand.Id</span>
-            </li>
+            <div class="col"><partial name="_ProductCard" model="product" /></div>
         }
-    </ul>
+    </div>
 }

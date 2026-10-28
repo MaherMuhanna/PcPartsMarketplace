@@ -22,6 +22,12 @@
                 </button>
 
                 <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav me-md-3">
+                        <li class="nav-item"><a class="nav-link" asp-controller="Catalog" asp-action="Index">Catalog</a></li>
+                    </ul>
+                    <form asp-controller="Catalog" asp-action="Index" method="get" class="d-flex my-2 my-md-0 nav-search" role="search">
+                        <input type="search" name="q" class="form-control form-control-sm" placeholder="Search parts" aria-label="Search products" maxlength="100" value="@Context.Request.Query["q"]" />
+                    </form>
                     <ul class="navbar-nav ms-auto align-items-md-center">
                         @if (isSignedIn)
                         {

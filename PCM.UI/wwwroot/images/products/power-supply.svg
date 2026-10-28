@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Power supply">
+  <rect width="400" height="300" rx="16" fill="#eef2f7"/>
+  <rect x="80" y="60" width="240" height="160" rx="10" fill="#cbd5e1" stroke="#1e3a5f" stroke-width="4"/>
+  <circle cx="200" cy="140" r="58" fill="#94a3b8" stroke="#1e3a5f" stroke-width="4"/>
+  <path d="M200 82v116M142 140h116M159 99l82 82M241 99l-82 82" stroke="#1e3a5f" stroke-width="3" opacity="0.5"/>
+  <circle cx="200" cy="140" r="12" fill="#1e3a5f"/>
+  <path d="M290 78l-14 26h12l-10 22" stroke="#d4a017" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="200" y="272" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="600" fill="#334155">Power supply</text>
+</svg>
