@@ -9,7 +9,7 @@ namespace PCM.Infrastructure.Mappings;
 public static class BrandMappings
 {
     public static BrandDto ToDto(this Brand brand) =>
-        new(brand.Id, brand.Name, brand.LogoUrl);
+        new(brand.Id, brand.Name, brand.Slug, brand.LogoUrl);
 }
 
 public static class PagingMappings

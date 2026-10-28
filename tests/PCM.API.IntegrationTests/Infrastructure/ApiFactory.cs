@@ -8,7 +8,7 @@ namespace PCM.API.IntegrationTests.Infrastructure;
 
 /// <summary>
 /// Starts a throwaway SQL Server 2025 container, builds the database from
-/// Database/schema.sql, and hosts PCM.API in memory pointing at it.
+/// Database/schema.sql + Database/seed.sql, and hosts PCM.API in memory pointing at it.
 /// Shared by all tests in <see cref="ApiCollection"/> (one container per test run).
 /// </summary>
 public sealed partial class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
@@ -24,7 +24,8 @@ public sealed partial class ApiFactory : WebApplicationFactory<Program>, IAsyncL
     public async ValueTask InitializeAsync()
     {
         await _sqlServer.StartAsync();
-        await ApplySchemaAsync(_sqlServer.GetConnectionString());
+        await RunScriptAsync(_sqlServer.GetConnectionString(), "schema.sql");
+        await RunScriptAsync(_sqlServer.GetConnectionString(), "seed.sql");
 
         ConnectionString = new SqlConnectionStringBuilder(_sqlServer.GetConnectionString())
         {
@@ -51,12 +52,12 @@ public sealed partial class ApiFactory : WebApplicationFactory<Program>, IAsyncL
     }
 
     /// <summary>
-    /// Runs schema.sql the way sqlcmd/SSMS do: split into batches on "GO" lines,
+    /// Runs a script from Database/ the way sqlcmd/SSMS do: split into batches on "GO" lines,
     /// all on one connection so USE and SET statements carry over.
     /// </summary>
-    private static async Task ApplySchemaAsync(string masterConnectionString)
+    private static async Task RunScriptAsync(string masterConnectionString, string fileName)
     {
-        var scriptPath = Path.Combine(AppContext.BaseDirectory, "Database", "schema.sql");
+        var scriptPath = Path.Combine(AppContext.BaseDirectory, "Database", fileName);
         var script = await File.ReadAllTextAsync(scriptPath);
 
         await using var connection = new SqlConnection(masterConnectionString);

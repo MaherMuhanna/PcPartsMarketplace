@@ -11,6 +11,8 @@ public partial class SpecAttribute
 
     public string Name { get; set; } = null!;
 
+    public string Slug { get; set; } = null!;
+
     public string DataType { get; set; } = null!;
 
     public string? Unit { get; set; }

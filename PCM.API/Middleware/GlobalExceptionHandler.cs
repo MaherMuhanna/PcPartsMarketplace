@@ -17,6 +17,25 @@ public sealed class GlobalExceptionHandler(
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        // Rule violations found by a service: same 400 shape as FluentValidation errors.
+        if (exception is RequestValidationException validation)
+        {
+            logger.LogInformation("Request failed with 400: {Fields}", string.Join(", ", validation.Errors.Keys));
+            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+            return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                Exception = exception,
+                ProblemDetails = new HttpValidationProblemDetails(
+                    validation.Errors.ToDictionary(e => e.Key, e => e.Value))
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "One or more validation errors occurred."
+                }
+            });
+        }
+
         var (status, title, detail) = exception switch
         {
             UnauthorizedException e => (StatusCodes.Status401Unauthorized, "Unauthorized", e.Message),

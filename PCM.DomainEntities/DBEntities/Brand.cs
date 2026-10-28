@@ -9,6 +9,8 @@ public partial class Brand
 
     public string Name { get; set; } = null!;
 
+    public string Slug { get; set; } = null!;
+
     public string? LogoUrl { get; set; }
 
     public DateTime CreatedAt { get; set; }

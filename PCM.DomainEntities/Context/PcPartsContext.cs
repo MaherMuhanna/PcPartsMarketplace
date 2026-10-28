@@ -78,11 +78,18 @@ public partial class PcPartsContext : DbContext
                 .IsUnique()
                 .HasFilter("([IsDeleted]=(0))");
 
+            entity.HasIndex(e => e.Slug, "UX_Brand_Slug")
+                .IsUnique()
+                .HasFilter("([IsDeleted]=(0))");
+
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())", "DF_Brand_CreatedAt");
             entity.Property(e => e.LogoUrl).HasMaxLength(500);
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Slug)
+                .HasMaxLength(100)
+                .IsUnicode(false);
             entity.Property(e => e.UpdatedAt).HasPrecision(3);
         });
 
@@ -401,11 +408,18 @@ public partial class PcPartsContext : DbContext
                 .IsUnique()
                 .HasFilter("([IsDeleted]=(0))");
 
+            entity.HasIndex(e => new { e.CategoryId, e.Slug }, "UX_SpecAttribute_CategoryId_Slug")
+                .IsUnique()
+                .HasFilter("([IsDeleted]=(0))");
+
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())", "DF_SpecAttribute_CreatedAt");
             entity.Property(e => e.DataType).HasMaxLength(20);
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Slug)
+                .HasMaxLength(100)
+                .IsUnicode(false);
             entity.Property(e => e.Unit).HasMaxLength(20);
             entity.Property(e => e.UpdatedAt).HasPrecision(3);
 
@@ -418,6 +432,10 @@ public partial class PcPartsContext : DbContext
         {
             entity.ToTable("SpecOption");
 
+            entity.HasIndex(e => new { e.SpecAttributeId, e.Slug }, "UX_SpecOption_SpecAttributeId_Slug")
+                .IsUnique()
+                .HasFilter("([IsDeleted]=(0))");
+
             entity.HasIndex(e => new { e.SpecAttributeId, e.Value }, "UX_SpecOption_SpecAttributeId_Value")
                 .IsUnique()
                 .HasFilter("([IsDeleted]=(0))");
@@ -425,6 +443,9 @@ public partial class PcPartsContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())", "DF_SpecOption_CreatedAt");
+            entity.Property(e => e.Slug)
+                .HasMaxLength(100)
+                .IsUnicode(false);
             entity.Property(e => e.UpdatedAt).HasPrecision(3);
             entity.Property(e => e.Value).HasMaxLength(100);
 

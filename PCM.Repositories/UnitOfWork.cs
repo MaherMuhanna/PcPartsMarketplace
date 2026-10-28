@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using PCM.DomainEntities.Context;
+using PCM.DomainEntities.DBEntities;
 using PCM.Repositories.IRepository;
 using PCM.Repositories.Repository;
 
@@ -22,6 +23,10 @@ public sealed class UnitOfWork(PcPartsContext context, AuthDbContext authContext
     private ISellerProfileRepository? _sellerProfiles;
     private IAddressRepository? _addresses;
     private IRefreshTokenRepository? _refreshTokens;
+    private ICategoryRepository? _categories;
+    private ISpecAttributeRepository? _specAttributes;
+    private IRepository<SpecOption>? _specOptions;
+    private IProductRepository? _products;
 
     public IBrandRepository Brands => _brands ??= new BrandRepository(context);
 
@@ -30,6 +35,14 @@ public sealed class UnitOfWork(PcPartsContext context, AuthDbContext authContext
     public IAddressRepository Addresses => _addresses ??= new AddressRepository(context);
 
     public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(context);
+
+    public ICategoryRepository Categories => _categories ??= new CategoryRepository(context);
+
+    public ISpecAttributeRepository SpecAttributes => _specAttributes ??= new SpecAttributeRepository(context);
+
+    public IRepository<SpecOption> SpecOptions => _specOptions ??= new Repository<SpecOption>(context);
+
+    public IProductRepository Products => _products ??= new ProductRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);

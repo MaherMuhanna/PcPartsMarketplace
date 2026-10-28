@@ -22,7 +22,7 @@ services:
       retries: 30
       start_period: 10s
 
-  # One-shot job: runs Database/schema.sql (idempotent, safe on every start).
+  # One-shot job: runs Database/schema.sql then Database/seed.sql (both idempotent, safe on every start).
   db-init:
     image: mcr.microsoft.com/mssql/server:2025-latest
     depends_on:
@@ -32,7 +32,7 @@ services:
       MSSQL_SA_PASSWORD: ${SA_PASSWORD}
     volumes:
       - ./Database:/scripts:ro
-    entrypoint: ["/bin/bash", "-c", "/opt/mssql-tools18/bin/sqlcmd -S db -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -i /scripts/schema.sql"]
+    entrypoint: ["/bin/bash", "-c", "/opt/mssql-tools18/bin/sqlcmd -S db -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -i /scripts/schema.sql && /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -i /scripts/seed.sql"]
     restart: "no"
 
   api:

@@ -25,7 +25,7 @@ public sealed class AuditAndSoftDeleteTests(ApiFactory factory)
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var brand = new Brand { Name = name };
+            var brand = new Brand { Name = name, Slug = $"test-brand-{Guid.NewGuid():N}" };
             await unitOfWork.Brands.AddAsync(brand, ct);
             await unitOfWork.SaveChangesAsync(ct);
 

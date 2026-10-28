@@ -25,8 +25,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The real schema script, copied next to the test assembly. -->
+    <!-- The real schema and seed scripts, copied next to the test assembly. -->
     <None Include="..\..\Database\schema.sql" Link="Database\schema.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Database\seed.sql" Link="Database\seed.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,3 +1,4 @@
+using PCM.DomainEntities.DBEntities;
 using PCM.Repositories.IRepository;
 
 namespace PCM.Repositories;
@@ -17,6 +18,14 @@ public interface IUnitOfWork
     IAddressRepository Addresses { get; }
 
     IRefreshTokenRepository RefreshTokens { get; }
+
+    ICategoryRepository Categories { get; }
+
+    ISpecAttributeRepository SpecAttributes { get; }
+
+    IRepository<SpecOption> SpecOptions { get; }
+
+    IProductRepository Products { get; }
 
     /// <summary>Persists all staged changes in one round trip; returns rows affected.</summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
