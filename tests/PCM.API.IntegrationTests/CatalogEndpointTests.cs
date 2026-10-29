@@ -109,7 +109,7 @@ public sealed class CatalogEndpointTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Filters_for_a_leaf_list_options_with_counts_and_number_ranges()
+    public async Task Filters_for_a_leaf_list_options_and_number_values_with_counts()
     {
         var filters = await _client.GetFromJsonAsync<CatalogFiltersDto>("/api/v1/products/filters?category=ram", Ct);
 
@@ -121,8 +121,6 @@ public sealed class CatalogEndpointTests(ApiFactory factory)
         Assert.Equal(5, memoryType.Options.Single(o => o.Slug == "ddr5").Count);
 
         var capacity = Assert.Single(filters.Attributes, a => a.Slug == "capacity");
-        Assert.Equal(16m, capacity.Min);
-        Assert.Equal(64m, capacity.Max);
         Assert.Equal(["16", "32", "64"], capacity.Options.Select(o => o.Slug));
         Assert.Equal(["16 GB", "32 GB", "64 GB"], capacity.Options.Select(o => o.Value));
         Assert.Equal([2, 3, 1], capacity.Options.Select(o => o.Count));

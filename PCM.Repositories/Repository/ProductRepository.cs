@@ -82,8 +82,7 @@ public class ProductRepository(PcPartsContext context) : Repository<Product>(con
                 p.ProductImages.OrderBy(i => i.SortOrder).ThenBy(i => i.Id).Select(i => i.Url).FirstOrDefault(),
                 p.Offers.Where(o => o.Seller.Status == ApprovedSeller && o.Stock - o.ReservedStock > 0).Min(o => (decimal?)o.Price),
                 p.Offers.Count(o => o.Seller.Status == ApprovedSeller),
-                p.Offers.Any(o => o.Seller.Status == ApprovedSeller && o.Stock - o.ReservedStock > 0),
-                p.CreatedAt))
+                p.Offers.Any(o => o.Seller.Status == ApprovedSeller && o.Stock - o.ReservedStock > 0)))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ProductListRow>(items, page, pageSize, totalCount);

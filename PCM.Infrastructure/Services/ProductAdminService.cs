@@ -57,7 +57,8 @@ public sealed class ProductAdminService(
         await productEditor.ApplyAsync(product, request, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await ReloadAsync(product, cancellationToken);
+        // Brand/category and the attributes of new spec values may be stale after the edit: read it fresh.
+        return await GetProductAsync(product.Id, cancellationToken);
     }
 
     public async Task<ProductManageDto> SetActiveAsync(int id, bool isActive, CancellationToken cancellationToken = default)
@@ -98,13 +99,6 @@ public sealed class ProductAdminService(
     private async Task<Product> GetForEditAsync(int id, CancellationToken cancellationToken) =>
         await unitOfWork.Products.GetForEditAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Product {id} was not found.");
-
-    /// <summary>
-    /// After an edit, brand/category navigations and the attributes of new spec values may be
-    /// stale or missing, so the response is built from a fresh read.
-    /// </summary>
-    private async Task<ProductManageDto> ReloadAsync(Product product, CancellationToken cancellationToken) =>
-        await GetProductAsync(product.Id, cancellationToken);
 
     /// <summary>Canonical casing ("pending" -> Pending). The validator has already checked the value.</summary>
     internal static string? NormalizeStatus(string? status) =>

@@ -17,14 +17,11 @@ public sealed class CategoryTree
     {
         ArgumentNullException.ThrowIfNull(categories);
 
-        All = categories;
         _byId = categories.ToDictionary(c => c.Id);
         _bySlug = categories.ToDictionary(c => c.Slug, StringComparer.OrdinalIgnoreCase);
         // Keeps the repository order (SortOrder, Name) inside each parent.
         _children = categories.ToLookup(c => c.ParentId);
     }
-
-    public IReadOnlyList<Category> All { get; }
 
     public IEnumerable<Category> Roots => _children[null];
 

@@ -62,8 +62,7 @@ public sealed record ProductListRow(
     string? MainImageUrl,
     decimal? MinPrice,
     int OfferCount,
-    bool InStock,
-    DateTime CreatedAt);
+    bool InStock);
 
 /// <summary>A visible offer on the product page (approved seller, not deleted).</summary>
 public sealed record ProductOfferRow(

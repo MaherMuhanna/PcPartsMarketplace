@@ -80,9 +80,10 @@
                     <fieldset class="mb-3">
                         <legend class="h6">Price (@DisplayExtensions.Currency)</legend>
                         <div class="d-flex gap-2">
-                            <input type="number" name="minPrice" value="@query.Get("minPrice")" class="form-control form-control-sm" placeholder="Min" min="0" step="any" aria-label="Minimum price" />
-                            <input type="number" name="maxPrice" value="@query.Get("maxPrice")" class="form-control form-control-sm" placeholder="Max" min="0" step="any" aria-label="Maximum price" />
+                            <input type="number" name="minPrice" id="minPrice" value="@query.Get("minPrice")" class="form-control form-control-sm" placeholder="Min" min="0" step="any" aria-label="Minimum price" />
+                            <input type="number" name="maxPrice" id="maxPrice" value="@query.Get("maxPrice")" class="form-control form-control-sm" placeholder="Max" min="0" step="any" aria-label="Maximum price" aria-describedby="priceError" />
                         </div>
+                        <div id="priceError" class="small text-danger mt-1" hidden>Max must be at least Min.</div>
                     </fieldset>
 
                     @if (filters.Brands.Count > 0)
@@ -315,3 +316,37 @@
         }
     </section>
 </div>
+
+@section Scripts {
+    <script>
+        // Price range: Max may not be below Min (equal is fine). The API rejects it too (400);
+        // this stops the request before it is sent and says why, without changing what the user typed.
+        (() => {
+            const form = document.querySelector('.filter-form');
+            const min = document.getElementById('minPrice');
+            const max = document.getElementById('maxPrice');
+            const error = document.getElementById('priceError');
+
+            const check = () => {
+                const low = parseFloat(min.value);
+                const high = parseFloat(max.value);
+                max.min = Number.isNaN(low) ? '0' : String(low);   // the browser's spinner and validation follow Min
+                const invalid = !Number.isNaN(low) && !Number.isNaN(high) && high < low;
+                max.setCustomValidity(invalid ? 'Max must be at least Min.' : '');
+                max.classList.toggle('is-invalid', invalid);
+                error.hidden = !invalid;
+                return !invalid;
+            };
+
+            min.addEventListener('input', check);
+            max.addEventListener('input', check);
+            form.addEventListener('submit', event => {
+                if (!check()) {
+                    event.preventDefault();
+                    max.focus();
+                }
+            });
+            check();
+        })();
+    </script>
+}

@@ -290,7 +290,7 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
                     .Select(o => new OptionFacetDto(o.Slug, o.Value, optionCounts.GetValueOrDefault(o.Id)))
                     .ToList();
                 result.Add(new AttributeFilterDto(
-                    attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options, null, null, IsYesNo(attribute)));
+                    attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options, IsYesNo(attribute)));
             }
             else if (attribute.IsDataType(SpecDataType.Number) && numberFacets[attribute.Id].Any())
             {
@@ -304,7 +304,7 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
                         attribute.Unit is { Length: > 0 } unit ? $"{CatalogMappings.FormatNumber(f.Value)} {unit}" : CatalogMappings.FormatNumber(f.Value),
                         f.Count))
                     .ToList();
-                result.Add(new AttributeFilterDto(attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options, values[0].Value, values[^1].Value));
+                result.Add(new AttributeFilterDto(attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options));
             }
         }
 

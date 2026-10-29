@@ -6,15 +6,11 @@ namespace PCM.UI.Catalog;
 /// <summary>
 /// The catalog page's query string in canonical form, e.g.
 /// <c>category=ram&amp;brand=corsair,kingston&amp;memory-type=ddr5&amp;capacity=32-64</c>.
-/// The filter form submits checkboxes as repeated keys and number ranges as two inputs
-/// ("capacity.min", "capacity.max"); <see cref="FromRequest"/> folds them into the short form,
-/// which is also exactly what PCM.API expects, so the UI forwards it unchanged.
+/// The filter form submits checkboxes as repeated keys; <see cref="FromRequest"/> folds them into
+/// the short form, which is also exactly what PCM.API expects, so the UI forwards it unchanged.
 /// </summary>
 public sealed class CatalogQuery
 {
-    public const string RangeMinSuffix = ".min";
-    public const string RangeMaxSuffix = ".max";
-
     /// <summary>Keys with one free-text value (never split on commas, case kept).</summary>
     private static readonly HashSet<string> SingleValueKeys =
         new(["q", "category", "sort", "minPrice", "maxPrice", "page", "pageSize"], StringComparer.OrdinalIgnoreCase);
@@ -27,26 +23,17 @@ public sealed class CatalogQuery
 
     /// <summary>
     /// Canonical form of the request: empty values dropped, repeated and comma-separated values
-    /// merged, trimmed, lower-cased and de-duplicated, ".min"/".max" pairs folded into "min-max".
+    /// merged, trimmed, lower-cased and de-duplicated.
     /// </summary>
     public static CatalogQuery FromRequest(IQueryCollection query)
     {
         var pairs = new List<KeyValuePair<string, string>>();
-        var ranges = new Dictionary<string, (string Min, string Max)>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var (rawKey, values) in query)
         {
             var key = rawKey.Trim();
             if (key.Length == 0)
             {
-                continue;
-            }
-
-            if (TrySplitRangeKey(key, out var baseKey, out var isMin))
-            {
-                var value = values.FirstOrDefault()?.Trim() ?? string.Empty;
-                (string Min, string Max) range = ranges.GetValueOrDefault(baseKey, (string.Empty, string.Empty));
-                ranges[baseKey] = isMin ? (value, range.Max) : (range.Min, value);
                 continue;
             }
 
@@ -60,11 +47,6 @@ public sealed class CatalogQuery
             Set(pairs, key, canonical);
         }
 
-        foreach (var (key, (min, max)) in ranges)
-        {
-            Set(pairs, key, min.Length == 0 && max.Length == 0 ? string.Empty : $"{min}-{max}");
-        }
-
         return new CatalogQuery(pairs);
     }
 
@@ -75,7 +57,7 @@ public sealed class CatalogQuery
     public IReadOnlySet<string> GetSet(string key) =>
         (Get(key) ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The two halves of a "min-max" value, for the range inputs.</summary>
+    /// <summary>The two halves of a "min-max" value (a range typed into the URL by hand).</summary>
     public (string Min, string Max) GetRange(string key)
     {
         var value = Get(key);
@@ -131,14 +113,6 @@ public sealed class CatalogQuery
     }
 
     // ---------------------------------------------------------------------
-
-    private static bool TrySplitRangeKey(string key, out string baseKey, out bool isMin)
-    {
-        isMin = key.EndsWith(RangeMinSuffix, StringComparison.OrdinalIgnoreCase);
-        var isMax = key.EndsWith(RangeMaxSuffix, StringComparison.OrdinalIgnoreCase);
-        baseKey = isMin || isMax ? key[..^RangeMinSuffix.Length] : key;
-        return (isMin || isMax) && baseKey.Length > 0;
-    }
 
     /// <summary>Replaces the key in place (keeps its position) or appends it; an empty value removes it.</summary>
     private static void Set(List<KeyValuePair<string, string>> pairs, string key, string value)
