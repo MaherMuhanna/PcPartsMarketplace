@@ -79,3 +79,12 @@ html {
     object-fit: contain;
     padding: 1rem;
 }
+
+.filter-dropdown {
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.filter-dropdown-toggle {
+    text-align: start;
+}

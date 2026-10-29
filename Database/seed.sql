@@ -108,7 +108,7 @@ FROM (VALUES
     ('ram', N'Capacity', 'capacity', N'Number', N'GB', 1, 1, 2),
     ('ram', N'Speed', 'speed', N'Number', N'MT/s', 1, 1, 3),
     ('ram', N'Modules', 'modules', N'Enum', NULL, 1, 0, 4),
-    ('ram', N'CAS Latency', 'cas-latency', N'Number', NULL, 1, 0, 5),
+    ('ram', N'CAS Latency', 'cas-latency', N'Number', NULL, 0, 0, 5),
     ('ram', N'RGB', 'rgb', N'Enum', NULL, 1, 0, 6),
     ('storage', N'Type', 'type', N'Enum', NULL, 1, 1, 1),
     ('storage', N'Capacity', 'capacity', N'Number', N'GB', 1, 1, 2),

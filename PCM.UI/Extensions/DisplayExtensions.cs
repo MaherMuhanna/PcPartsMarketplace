@@ -13,8 +13,4 @@ public static class DisplayExtensions
 
     public static string ToPrice(this decimal amount) =>
         $"{Currency} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
-
-    /// <summary>Range input value without trailing zeros ("16" not "16.0000").</summary>
-    public static string ToInputNumber(this decimal value) =>
-        value.ToString("0.####", CultureInfo.InvariantCulture);
 }

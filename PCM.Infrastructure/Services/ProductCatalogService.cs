@@ -152,13 +152,18 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
             }
             else if (attribute.IsDataType(SpecDataType.Number))
             {
-                if (TryParseRange(raw, out var min, out var max))
+                // The catalog sends picked values ("32,64"); a range ("16-64") is still accepted for hand-written URLs.
+                if (raw.Contains('-') && TryParseRange(raw, out var min, out var max))
                 {
                     numberFilters.Add(new NumberFilter(attribute.Id, min, max));
                 }
+                else if (!raw.Contains('-') && TryParseValues(raw, out var values))
+                {
+                    numberFilters.Add(new NumberFilter(attribute.Id, null, null, values));
+                }
                 else
                 {
-                    errors[attribute.Slug] = [$"Use min-max, min-, -max or one number, e.g. {attribute.Slug}=16-64."];
+                    errors[attribute.Slug] = [$"Use values such as {attribute.Slug}=16,32 or a range such as {attribute.Slug}=16-64."];
                 }
             }
         }
@@ -218,6 +223,25 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
         return min is null || max is null || min <= max;
     }
 
+    /// <summary>Parses "32" or "16,32,64" (OR). False if any part is not a non-negative number.</summary>
+    public static bool TryParseValues(string text, out IReadOnlyCollection<decimal> values)
+    {
+        var parsed = new HashSet<decimal>();
+        foreach (var part in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!TryParseNumber(part, out var value))
+            {
+                values = [];
+                return false;
+            }
+
+            parsed.Add(value);
+        }
+
+        values = parsed;
+        return parsed.Count > 0;
+    }
+
     private static bool TryParseNumber(string text, out decimal value) =>
         decimal.TryParse(text.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value);
 
@@ -247,8 +271,8 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
         var attributes = await unitOfWork.SpecAttributes.GetByCategoryAsync(categoryId, cancellationToken);
         var optionCounts = (await unitOfWork.Products.GetOptionFacetsAsync(categoryId, cancellationToken))
             .ToDictionary(f => f.Id, f => f.Count);
-        var ranges = (await unitOfWork.Products.GetNumberRangesAsync(categoryId, cancellationToken))
-            .ToDictionary(r => r.AttributeId);
+        var numberFacets = (await unitOfWork.Products.GetNumberFacetsAsync(categoryId, cancellationToken))
+            .ToLookup(f => f.AttributeId);
 
         var result = new List<AttributeFilterDto>();
         foreach (var attribute in attributes.Where(a => a.IsFilterable))
@@ -260,10 +284,19 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
                     .ToList();
                 result.Add(new AttributeFilterDto(attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options, null, null));
             }
-            else if (attribute.IsDataType(SpecDataType.Number) && ranges.TryGetValue(attribute.Id, out var range))
+            else if (attribute.IsDataType(SpecDataType.Number) && numberFacets[attribute.Id].Any())
             {
+                // The values products really have become the choices (16 GB, 32 GB, ...), smallest first;
+                // the slug is the plain number sent back in the URL (?capacity=16,32).
                 // A number attribute no product has a value for is not worth a filter.
-                result.Add(new AttributeFilterDto(attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, [], range.Min, range.Max));
+                var values = numberFacets[attribute.Id].OrderBy(f => f.Value).ToList();
+                var options = values
+                    .Select(f => new OptionFacetDto(
+                        CatalogMappings.FormatNumber(f.Value),
+                        attribute.Unit is { Length: > 0 } unit ? $"{CatalogMappings.FormatNumber(f.Value)} {unit}" : CatalogMappings.FormatNumber(f.Value),
+                        f.Count))
+                    .ToList();
+                result.Add(new AttributeFilterDto(attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options, values[0].Value, values[^1].Value));
             }
         }
 

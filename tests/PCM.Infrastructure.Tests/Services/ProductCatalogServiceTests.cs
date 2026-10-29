@@ -29,6 +29,22 @@ public sealed class ProductCatalogServiceTests
         Assert.False(ProductCatalogService.TryParseRange(text, out _, out _));
     }
 
+    [Fact]
+    public void TryParseValues_reads_a_comma_separated_list()
+    {
+        Assert.True(ProductCatalogService.TryParseValues("16, 32,32,4.5", out var values));
+        Assert.Equal([4.5m, 16m, 32m], values.Order());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(",")]
+    [InlineData("16,abc")]
+    public void TryParseValues_rejects_anything_that_is_not_a_number(string text)
+    {
+        Assert.False(ProductCatalogService.TryParseValues(text, out _));
+    }
+
     private static decimal? Parse(string? value) =>
         value is null ? null : decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
 }

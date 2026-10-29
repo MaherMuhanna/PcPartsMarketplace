@@ -32,8 +32,11 @@ public sealed record ProductSearchCriteria
 /// <summary>The product must have one of <paramref name="OptionIds"/> for the attribute.</summary>
 public sealed record OptionFilter(int AttributeId, IReadOnlyCollection<int> OptionIds);
 
-/// <summary>The product's number for the attribute must be inside the (inclusive) range; a null bound is open.</summary>
-public sealed record NumberFilter(int AttributeId, decimal? Min, decimal? Max);
+/// <summary>
+/// The product's number for the attribute must be one of <paramref name="Values"/> (when given),
+/// otherwise inside the inclusive range Min..Max (a null bound is open).
+/// </summary>
+public sealed record NumberFilter(int AttributeId, decimal? Min, decimal? Max, IReadOnlyCollection<decimal>? Values = null);
 
 /// <summary>Sort orders of the public product search.</summary>
 public enum ProductSort
@@ -74,8 +77,8 @@ public sealed record ProductOfferRow(
 /// <summary>How many catalog products have a given value (brand id or option id).</summary>
 public sealed record FacetCount(int Id, int Count);
 
-/// <summary>Smallest and largest value of a Number attribute among catalog products.</summary>
-public sealed record NumberRange(int AttributeId, decimal Min, decimal Max);
+/// <summary>How many catalog products have a given value of a Number attribute (e.g. Capacity 32: 3 products).</summary>
+public sealed record NumberFacet(int AttributeId, decimal Value, int Count);
 
 /// <summary>Filters of the admin and seller product lists (any status).</summary>
 public sealed record ProductManageFilter

@@ -91,8 +91,8 @@ public sealed record CatalogFiltersDto(
 public sealed record BrandFacetDto(string Slug, string Name, int Count);
 
 /// <summary>
-/// A filterable attribute. Enum: <see cref="Options"/> with product counts.
-/// Number: <see cref="Min"/> and <see cref="Max"/> of the values in the category.
+/// A filterable attribute with its choices and product counts. Enum: the attribute's options.
+/// Number: the distinct values products have (slug "32", value "32 GB"), plus <see cref="Min"/> and <see cref="Max"/>.
 /// </summary>
 public sealed record AttributeFilterDto(
     string Slug,

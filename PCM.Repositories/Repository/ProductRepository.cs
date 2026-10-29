@@ -124,11 +124,11 @@ public class ProductRepository(PcPartsContext context) : Repository<Product>(con
             .Select(g => new FacetCount(g.Key, g.Count()))
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<NumberRange>> GetNumberRangesAsync(int categoryId, CancellationToken cancellationToken = default) =>
+    public async Task<IReadOnlyList<NumberFacet>> GetNumberFacetsAsync(int categoryId, CancellationToken cancellationToken = default) =>
         await PublishedSpecValues(categoryId)
             .Where(v => v.NumberValue != null)
-            .GroupBy(v => v.SpecAttributeId)
-            .Select(g => new NumberRange(g.Key, g.Min(v => v.NumberValue!.Value), g.Max(v => v.NumberValue!.Value)))
+            .GroupBy(v => new { v.SpecAttributeId, Value = v.NumberValue!.Value })
+            .Select(g => new NumberFacet(g.Key.SpecAttributeId, g.Key.Value, g.Count()))
             .ToListAsync(cancellationToken);
 
     // ---------------------------------------------------------------------
@@ -222,7 +222,13 @@ public class ProductRepository(PcPartsContext context) : Repository<Product>(con
         foreach (var filter in criteria.NumberFilters)
         {
             var attributeId = filter.AttributeId;
-            if (filter.Min is { } min && filter.Max is { } max)
+            if (filter.Values is { Count: > 0 } values)
+            {
+                // Picked values (OR), e.g. Capacity 32 or 64.
+                query = query.Where(p => p.ProductSpecValues.Any(v =>
+                    v.SpecAttributeId == attributeId && v.NumberValue != null && values.Contains(v.NumberValue.Value)));
+            }
+            else if (filter.Min is { } min && filter.Max is { } max)
             {
                 query = query.Where(p => p.ProductSpecValues.Any(v =>
                     v.SpecAttributeId == attributeId && v.NumberValue >= min && v.NumberValue <= max));

@@ -35,7 +35,9 @@ public sealed class CatalogEndpointTests(ApiFactory factory)
     [InlineData("category=ram&memory-type=ddr4", 1)]
     [InlineData("category=ram&memory-type=ddr4,ddr5", 6)]
     [InlineData("category=ram&memory-type=ddr4&memory-type=ddr5", 6)]
-    [InlineData("category=ram&capacity=32-64", 4)]
+    [InlineData("category=ram&capacity=32,64", 4)]           // picked values (OR)
+    [InlineData("category=ram&capacity=16&speed=5200", 1)]
+    [InlineData("category=ram&capacity=32-64", 4)]           // ranges still work for hand-written URLs
     [InlineData("category=ram&capacity=32-", 4)]
     [InlineData("category=ram&capacity=-16", 2)]
     [InlineData("category=ram&memory-type=ddr5&capacity=16", 1)]  // AND between attributes
@@ -85,6 +87,7 @@ public sealed class CatalogEndpointTests(ApiFactory factory)
     [Theory]
     [InlineData("category=ram&capacity=abc", "capacity")]
     [InlineData("category=ram&capacity=64-16", "capacity")]
+    [InlineData("category=ram&capacity=16,big", "capacity")]
     [InlineData("sort=rating", "sort")]
     [InlineData("minPrice=50&maxPrice=10", "maxPrice")]
     public async Task Bad_values_return_400_with_the_field_name(string queryString, string field)
@@ -118,6 +121,12 @@ public sealed class CatalogEndpointTests(ApiFactory factory)
         var capacity = Assert.Single(filters.Attributes, a => a.Slug == "capacity");
         Assert.Equal(16m, capacity.Min);
         Assert.Equal(64m, capacity.Max);
+        Assert.Equal(["16", "32", "64"], capacity.Options.Select(o => o.Slug));
+        Assert.Equal(["16 GB", "32 GB", "64 GB"], capacity.Options.Select(o => o.Value));
+        Assert.Equal([2, 3, 1], capacity.Options.Select(o => o.Count));
+
+        // CAS Latency stays in the specs but is not offered as a filter.
+        Assert.DoesNotContain(filters.Attributes, a => a.Slug == "cas-latency");
 
         Assert.Equal(2, filters.Brands.Single(b => b.Slug == "corsair").Count);
         Assert.DoesNotContain(filters.Brands, b => b.Slug == "amd");

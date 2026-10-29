@@ -105,7 +105,8 @@
                     @foreach (var spec in filters.Attributes)
                     {
                         <fieldset class="mb-3">
-                            <legend class="h6">@(spec.Unit is null ? spec.Name : $"{spec.Name} ({spec.Unit})")</legend>
+                            @* Number choices already carry the unit ("32 GB"), so only Enum legends show it. *@
+                            <legend class="h6">@(spec.Unit is null || spec.DataType != "Enum" ? spec.Name : $"{spec.Name} ({spec.Unit})")</legend>
                             @if (spec.DataType == "Enum")
                             {
                                 var selected = query.GetSet(spec.Slug);
@@ -122,12 +123,27 @@
                             }
                             else
                             {
-                                var (min, max) = query.GetRange(spec.Slug);
-                                <div class="d-flex gap-2">
-                                    <input type="number" name="@(spec.Slug)@CatalogQuery.RangeMinSuffix" value="@min" class="form-control form-control-sm"
-                                           placeholder="@spec.Min?.ToInputNumber()" min="0" step="any" aria-label="Minimum @spec.Name" />
-                                    <input type="number" name="@(spec.Slug)@CatalogQuery.RangeMaxSuffix" value="@max" class="form-control form-control-sm"
-                                           placeholder="@spec.Max?.ToInputNumber()" min="0" step="any" aria-label="Maximum @spec.Name" />
+                                // Number: a drop-down of the values products really have (16 GB, 32 GB, ...), pick any number of them.
+                                var selected = query.GetSet(spec.Slug);
+                                var chosen = spec.Options.Where(o => selected.Contains(o.Slug)).Select(o => o.Value).ToList();
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-between align-items-center filter-dropdown-toggle"
+                                            type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Choose @spec.Name">
+                                        <span class="text-truncate">@(chosen.Count == 0 ? "Any" : string.Join(", ", chosen))</span>
+                                        <span class="dropdown-toggle ms-2" aria-hidden="true"></span>
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2 filter-dropdown">
+                                        @foreach (var option in spec.Options)
+                                        {
+                                            var id = $"{spec.Slug}-{option.Slug}";
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="@spec.Slug" value="@option.Slug" id="@id" checked="@selected.Contains(option.Slug)" />
+                                                <label class="form-check-label d-flex justify-content-between" for="@id">
+                                                    <span>@option.Value</span><span class="text-muted small">@option.Count</span>
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
                             }
                         </fieldset>
@@ -197,8 +213,9 @@
                 }
                 @foreach (var spec in filters.Attributes.Where(a => query.Has(a.Slug)))
                 {
-                    if (spec.DataType == "Enum")
+                    if (spec.DataType == "Enum" || !query.Get(spec.Slug)!.Contains('-'))
                     {
+                        // One removable chip per picked value (Enum option or Number value).
                         foreach (var option in spec.Options.Where(o => query.GetSet(spec.Slug).Contains(o.Slug)))
                         {
                             <a class="badge rounded-pill text-bg-light border filter-chip" href="@WithoutValue(spec.Slug, option.Slug)">@spec.Name: @option.Value &times;</a>
@@ -206,6 +223,7 @@
                     }
                     else
                     {
+                        @* A range typed into the URL by hand, e.g. capacity=16-64. *@
                         var (min, max) = query.GetRange(spec.Slug);
                         <a class="badge rounded-pill text-bg-light border filter-chip" href="@query.Without(spec.Slug, "page").ToUrl(path)">
                             @spec.Name: @(min.Length == 0 ? "any" : min) to @(max.Length == 0 ? "any" : max) @spec.Unit &times;

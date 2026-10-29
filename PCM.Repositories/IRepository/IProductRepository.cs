@@ -31,8 +31,8 @@ public interface IProductRepository : IRepository<Product>
     /// <summary>Published products per Enum option of a leaf category's attributes.</summary>
     Task<IReadOnlyList<FacetCount>> GetOptionFacetsAsync(int categoryId, CancellationToken cancellationToken = default);
 
-    /// <summary>Min and max of every Number attribute of a leaf category, over published products.</summary>
-    Task<IReadOnlyList<NumberRange>> GetNumberRangesAsync(int categoryId, CancellationToken cancellationToken = default);
+    /// <summary>Distinct values of every Number attribute of a leaf category with product counts, over published products.</summary>
+    Task<IReadOnlyList<NumberFacet>> GetNumberFacetsAsync(int categoryId, CancellationToken cancellationToken = default);
 
     // ---- Admin and seller management (any status) ----
 
