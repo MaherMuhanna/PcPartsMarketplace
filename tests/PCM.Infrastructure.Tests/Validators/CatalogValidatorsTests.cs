@@ -45,6 +45,8 @@ public sealed class CatalogValidatorsTests
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("//evil.example.com/x.png")]
+    [InlineData("/\\evil.example.com/x.png")]
+    [InlineData("/images/<script>.png")]
     [InlineData("ftp://example.com/x.png")]
     [InlineData("")]
     public void Image_url_must_be_http_or_a_site_path(string url)

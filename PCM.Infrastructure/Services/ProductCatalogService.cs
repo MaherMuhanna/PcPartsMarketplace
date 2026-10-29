@@ -144,6 +144,13 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
             {
                 // Unknown option slugs match nothing; if none is known, the filter matches no product.
                 var wanted = SplitValues([raw]);
+
+                // Yes/No is a single choice: "yes,no" (a hand-written URL) means no filter at all.
+                if (IsYesNo(attribute) && wanted.Count > 1)
+                {
+                    continue;
+                }
+
                 var optionIds = attribute.SpecOptions
                     .Where(o => wanted.Contains(o.Slug, StringComparer.OrdinalIgnoreCase))
                     .Select(o => o.Id)
@@ -282,7 +289,8 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
                 var options = attribute.SpecOptions
                     .Select(o => new OptionFacetDto(o.Slug, o.Value, optionCounts.GetValueOrDefault(o.Id)))
                     .ToList();
-                result.Add(new AttributeFilterDto(attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options, null, null));
+                result.Add(new AttributeFilterDto(
+                    attribute.Slug, attribute.Name, attribute.DataType, attribute.Unit, options, null, null, IsYesNo(attribute)));
             }
             else if (attribute.IsDataType(SpecDataType.Number) && numberFacets[attribute.Id].Any())
             {
@@ -320,6 +328,12 @@ public sealed class ProductCatalogService(IUnitOfWork unitOfWork) : IProductCata
             product.ToImageDtos(),
             offers.Select(o => o.ToDto()).ToList());
     }
+
+    /// <summary>An Enum attribute whose only options are Yes and No (Wi-Fi, RGB, Integrated Graphics).</summary>
+    public static bool IsYesNo(SpecAttribute attribute) =>
+        attribute.IsDataType(SpecDataType.Enum)
+        && attribute.SpecOptions.Count == 2
+        && attribute.SpecOptions.Select(o => o.Slug).Order(StringComparer.Ordinal).SequenceEqual(["no", "yes"]);
 
     private static ProductSort ParseSort(string? sort) => sort?.ToLowerInvariant() switch
     {

@@ -15,6 +15,9 @@ public sealed class ProductListQueryValidator : PageQueryValidator<ProductListQu
         RuleFor(q => q.Q).MaximumLength(100);
         RuleFor(q => q.Category).MaximumLength(100);
         RuleForEach(q => q.Brand).MaximumLength(500);
+        RuleFor(q => q.Brand)
+            .Must(brands => brands is null || brands.Length <= 20)
+            .WithMessage("At most 20 brand values.");
 
         RuleFor(q => q.MinPrice).GreaterThanOrEqualTo(0m);
         RuleFor(q => q.MaxPrice).GreaterThanOrEqualTo(0m);
@@ -43,7 +46,7 @@ public sealed class SellerProposalListQueryValidator : PageQueryValidator<Seller
     }
 }
 
-public sealed class ProductUpsertRequestValidator : AbstractValidator<ProductUpsertRequest>
+public sealed partial class ProductUpsertRequestValidator : AbstractValidator<ProductUpsertRequest>
 {
     public const int MaxImages = 8;
 
@@ -98,10 +101,17 @@ public sealed class ProductUpsertRequestValidator : AbstractValidator<ProductUps
         });
     }
 
+    /// <summary>
+    /// http(s) URL, or a path on this site such as /images/products/cpu.svg. A path must start with
+    /// "/" followed by a letter or digit: "//host" and "/\host" are read by browsers as another site.
+    /// </summary>
     private static bool BeImageUrl(string url) =>
-        url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal)
-            ? Uri.IsWellFormedUriString(url, UriKind.Relative)
+        url.StartsWith('/')
+            ? SitePath().IsMatch(url)
             : Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^/[A-Za-z0-9][A-Za-z0-9/._-]*$")]
+    private static partial System.Text.RegularExpressions.Regex SitePath();
 }
 
 public sealed class ProductReviewRequestValidator : AbstractValidator<ProductReviewRequest>

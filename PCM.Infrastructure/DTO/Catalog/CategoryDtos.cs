@@ -93,6 +93,8 @@ public sealed record BrandFacetDto(string Slug, string Name, int Count);
 /// <summary>
 /// A filterable attribute with its choices and product counts. Enum: the attribute's options.
 /// Number: the distinct values products have (slug "32", value "32 GB"), plus <see cref="Min"/> and <see cref="Max"/>.
+/// <see cref="SingleChoice"/> is true for Yes/No attributes: picking both would filter nothing,
+/// so clients offer one choice (Any / Yes / No) instead of checkboxes.
 /// </summary>
 public sealed record AttributeFilterDto(
     string Slug,
@@ -101,6 +103,7 @@ public sealed record AttributeFilterDto(
     string? Unit,
     IReadOnlyList<OptionFacetDto> Options,
     decimal? Min,
-    decimal? Max);
+    decimal? Max,
+    bool SingleChoice = false);
 
 public sealed record OptionFacetDto(string Slug, string Value, int Count);

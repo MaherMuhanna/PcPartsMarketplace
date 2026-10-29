@@ -107,7 +107,27 @@
                         <fieldset class="mb-3">
                             @* Number choices already carry the unit ("32 GB"), so only Enum legends show it. *@
                             <legend class="h6">@(spec.Unit is null || spec.DataType != "Enum" ? spec.Name : $"{spec.Name} ({spec.Unit})")</legend>
-                            @if (spec.DataType == "Enum")
+                            @if (spec.SingleChoice)
+                            {
+                                // Yes/No: one choice only (Any / Yes / No); ticking both would filter nothing.
+                                var current = query.Get(spec.Slug);
+                                var anyId = $"{spec.Slug}-any";
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="@spec.Slug" value="" id="@anyId" checked="@string.IsNullOrEmpty(current)" />
+                                    <label class="form-check-label" for="@anyId">Any</label>
+                                </div>
+                                foreach (var option in spec.Options)
+                                {
+                                    var id = $"{spec.Slug}-{option.Slug}";
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="@spec.Slug" value="@option.Slug" id="@id" checked="@string.Equals(current, option.Slug, StringComparison.OrdinalIgnoreCase)" />
+                                        <label class="form-check-label d-flex justify-content-between" for="@id">
+                                            <span>@option.Value</span><span class="text-muted small">@option.Count</span>
+                                        </label>
+                                    </div>
+                                }
+                            }
+                            else if (spec.DataType == "Enum")
                             {
                                 var selected = query.GetSet(spec.Slug);
                                 foreach (var option in spec.Options.Where(o => o.Count > 0 || selected.Contains(o.Slug)))

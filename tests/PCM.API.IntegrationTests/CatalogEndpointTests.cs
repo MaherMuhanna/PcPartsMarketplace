@@ -47,6 +47,8 @@ public sealed class CatalogEndpointTests(ApiFactory factory)
     [InlineData("category=ram&memory-type=ddr6", 0)]  // unknown option matches nothing
     [InlineData("category=ram&not-an-attribute=x", 6)] // unknown keys are ignored
     [InlineData("category=cpu&socket=am5&cores=8-", 2)]
+    [InlineData("category=cpu&integrated-graphics=no", 1)]
+    [InlineData("category=cpu&integrated-graphics=yes,no", 6)]   // both = no filter
     [InlineData("q=ryzen", 3)]
     [InlineData("q=BX8071514700K", 1)]                // model number
     [InlineData("category=components&memory-type=ddr4", 36)] // spec filters need a leaf category
@@ -127,6 +129,10 @@ public sealed class CatalogEndpointTests(ApiFactory factory)
 
         // CAS Latency stays in the specs but is not offered as a filter.
         Assert.DoesNotContain(filters.Attributes, a => a.Slug == "cas-latency");
+
+        // Yes/No attributes are a single choice; other lists are multi-select.
+        Assert.True(filters.Attributes.Single(a => a.Slug == "rgb").SingleChoice);
+        Assert.False(memoryType.SingleChoice);
 
         Assert.Equal(2, filters.Brands.Single(b => b.Slug == "corsair").Count);
         Assert.DoesNotContain(filters.Brands, b => b.Slug == "amd");
