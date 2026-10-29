@@ -96,7 +96,7 @@ FROM (VALUES
     ('cpu', N'Threads', 'threads', N'Number', NULL, 0, 0, 3),
     ('cpu', N'Base Clock', 'base-clock', N'Number', N'GHz', 0, 0, 4),
     ('cpu', N'Boost Clock', 'boost-clock', N'Number', N'GHz', 1, 0, 5),
-    ('cpu', N'TDP', 'tdp', N'Number', N'W', 1, 0, 6),
+    ('cpu', N'TDP', 'tdp', N'Number', N'W', 0, 0, 6),
     ('cpu', N'Integrated Graphics', 'integrated-graphics', N'Enum', NULL, 1, 0, 7),
     ('gpu', N'Chipset', 'chipset', N'Enum', NULL, 1, 1, 1),
     ('gpu', N'Memory', 'memory', N'Number', N'GB', 1, 1, 2),
