@@ -1,12 +1,12 @@
-using PCM.Infrastructure.DTO.Brands;
+using PCM.Infrastructure.DTO.Catalog;
 
 namespace PCM.UI.Models;
 
 public sealed class HomeViewModel
 {
-    public IReadOnlyList<BrandDto> Brands { get; set; } = [];
+    public IReadOnlyList<CategoryTreeDto> Categories { get; set; } = [];
 
-    public string? ApiError { get; set; }
+    public IReadOnlyList<ProductListItemDto> NewestProducts { get; set; } = [];
 }
 
 public sealed class ErrorViewModel

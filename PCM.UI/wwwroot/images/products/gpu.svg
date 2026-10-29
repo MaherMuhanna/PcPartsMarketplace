@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Graphics card">
+  <rect width="400" height="300" rx="16" fill="#eef2f7"/>
+  <rect x="60" y="70" width="280" height="120" rx="12" fill="#cbd5e1" stroke="#1e3a5f" stroke-width="4"/>
+  <circle cx="140" cy="130" r="42" fill="#94a3b8" stroke="#1e3a5f" stroke-width="4"/>
+  <circle cx="260" cy="130" r="42" fill="#94a3b8" stroke="#1e3a5f" stroke-width="4"/>
+  <circle cx="140" cy="130" r="10" fill="#1e3a5f"/>
+  <circle cx="260" cy="130" r="10" fill="#1e3a5f"/>
+  <path d="M140 92v76M102 130h76M260 92v76M222 130h76" stroke="#1e3a5f" stroke-width="3" opacity="0.5"/>
+  <rect x="90" y="190" width="150" height="16" fill="#d4a017" stroke="#1e3a5f" stroke-width="4"/>
+  <text x="200" y="272" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="600" fill="#334155">Graphics card</text>
+</svg>

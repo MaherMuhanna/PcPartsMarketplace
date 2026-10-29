@@ -22,4 +22,15 @@ public class BrandRepository(PcPartsContext context) : Repository<Brand>(context
 
         return ordered.ToPagedResultAsync(page, pageSize, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Brand>> GetBySlugsAsync(IReadOnlyCollection<string> slugs, CancellationToken cancellationToken = default) =>
+        await DbSet.AsNoTracking()
+            .Where(b => slugs.Contains(b.Slug))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Brand>> GetByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default) =>
+        await DbSet.AsNoTracking()
+            .Where(b => ids.Contains(b.Id))
+            .OrderBy(b => b.Name)
+            .ToListAsync(cancellationToken);
 }

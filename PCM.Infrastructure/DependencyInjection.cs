@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using PCM.DomainEntities.Context;
 using PCM.DomainEntities.Identity;
+using PCM.Infrastructure.Catalog;
 using PCM.Infrastructure.Seeding;
 using PCM.Infrastructure.Services;
 
@@ -45,11 +46,18 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<AuthDbContext>();
 
         services.AddScoped<IBrandService, BrandService>();
+        services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<ISpecAttributeService, SpecAttributeService>();
+        services.AddScoped<IProductCatalogService, ProductCatalogService>();
+        services.AddScoped<IProductAdminService, ProductAdminService>();
+        services.AddScoped<ISellerProposalService, SellerProposalService>();
+        services.AddScoped<ProductEditor>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAddressService, AddressService>();
         services.AddScoped<ISellerAdminService, SellerAdminService>();
         services.AddScoped<ISellerProfileService, SellerProfileService>();
         services.AddScoped<DemoUserSeeder>();
+        services.AddScoped<DemoCatalogSeeder>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly, ServiceLifetime.Singleton);
 

@@ -78,11 +78,16 @@ jobs:
           done
           docker logs sql; exit 1
 
-      - name: Apply schema.sql twice (must be idempotent)
+      - name: Apply schema.sql and seed.sql twice (both must be idempotent)
         run: |
           docker cp Database/schema.sql sql:/tmp/schema.sql
-          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
-          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
+          docker cp Database/seed.sql sql:/tmp/seed.sql
+          for run in 1 2; do
+            docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/schema.sql
+            docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -i /tmp/seed.sql
+          done
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -d PcPartsMarketplace \
+            -Q "SET NOCOUNT ON; SELECT COUNT(*) AS Products FROM dbo.Product; SELECT COUNT(*) AS SpecValues FROM dbo.ProductSpecValue;"
 
       - name: Re-scaffold with the same script developers use
         run: |

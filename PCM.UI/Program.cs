@@ -53,7 +53,7 @@ try
     builder.Services.AddTransient<ApiTokenHandler>();
     builder.Services.AddHttpClient(ApiTokenHandler.RefreshClientName, ConfigureApiClient);
 
-    builder.Services.AddHttpClient<IBrandsApiClient, BrandsApiClient>(ConfigureApiClient);
+    builder.Services.AddHttpClient<ICatalogApiClient, CatalogApiClient>(ConfigureApiClient);
     builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
     builder.Services.AddHttpClient<IAddressesApiClient, AddressesApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
     builder.Services.AddHttpClient<IAdminSellersApiClient, AdminSellersApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();

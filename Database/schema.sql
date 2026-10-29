@@ -5,6 +5,7 @@
    - Run with SSMS (F5) or: sqlcmd -S localhost -E -C -i Database/schema.sql
    - Idempotent: if the schema already exists, the script skips everything.
      To rebuild from scratch, run Database/reset.sql first.
+   - Tables only. Seed data is in Database/seed.sql (run it right after).
    - After any change here: re-run the script, then re-scaffold
      (see scripts/scaffold.ps1). Never edit scaffolded entities by hand.
 
@@ -244,6 +245,7 @@ CREATE TABLE dbo.SpecAttribute
     Id           int IDENTITY(1,1) NOT NULL,
     CategoryId   int               NOT NULL,
     Name         nvarchar(100)     NOT NULL,
+    Slug         varchar(100)      NOT NULL,      -- query-string key in catalog filters, e.g. memory-type
     DataType     nvarchar(20)      NOT NULL,
     Unit         nvarchar(20)      NULL,
     IsFilterable bit               NOT NULL CONSTRAINT DF_SpecAttribute_IsFilterable DEFAULT 0,
@@ -257,6 +259,7 @@ CREATE TABLE dbo.SpecAttribute
     CONSTRAINT CK_SpecAttribute_DataType CHECK (DataType IN (N'Text', N'Number', N'Enum'))
 );
 CREATE UNIQUE INDEX UX_SpecAttribute_CategoryId_Name ON dbo.SpecAttribute (CategoryId, Name) WHERE IsDeleted = 0;
+CREATE UNIQUE INDEX UX_SpecAttribute_CategoryId_Slug ON dbo.SpecAttribute (CategoryId, Slug) WHERE IsDeleted = 0;
 GO
 
 -- SpecOption [Audit]: allowed values of an Enum attribute, e.g. DDR4, DDR5.
@@ -265,6 +268,7 @@ CREATE TABLE dbo.SpecOption
     Id              int IDENTITY(1,1) NOT NULL,
     SpecAttributeId int               NOT NULL,
     Value           nvarchar(100)     NOT NULL,
+    Slug            varchar(100)      NOT NULL,   -- query-string value in catalog filters, e.g. ddr5
     SortOrder       int               NOT NULL CONSTRAINT DF_SpecOption_SortOrder DEFAULT 0,
     CreatedAt       datetime2(3)      NOT NULL CONSTRAINT DF_SpecOption_CreatedAt DEFAULT SYSUTCDATETIME(),
     UpdatedAt       datetime2(3)      NULL,
@@ -272,6 +276,7 @@ CREATE TABLE dbo.SpecOption
     CONSTRAINT PK_SpecOption PRIMARY KEY (Id),
     CONSTRAINT FK_SpecOption_SpecAttribute_SpecAttributeId FOREIGN KEY (SpecAttributeId) REFERENCES dbo.SpecAttribute (Id)
 );
+CREATE UNIQUE INDEX UX_SpecOption_SpecAttributeId_Slug ON dbo.SpecOption (SpecAttributeId, Slug) WHERE IsDeleted = 0;
 CREATE UNIQUE INDEX UX_SpecOption_SpecAttributeId_Value ON dbo.SpecOption (SpecAttributeId, Value) WHERE IsDeleted = 0;
 GO
 
@@ -280,6 +285,7 @@ CREATE TABLE dbo.Brand
 (
     Id        int IDENTITY(1,1) NOT NULL,
     Name      nvarchar(100)     NOT NULL,
+    Slug      varchar(100)      NOT NULL,          -- catalog filter value, e.g. ?brand=amd
     LogoUrl   nvarchar(500)     NULL,
     CreatedAt datetime2(3)      NOT NULL CONSTRAINT DF_Brand_CreatedAt DEFAULT SYSUTCDATETIME(),
     UpdatedAt datetime2(3)      NULL,
@@ -287,6 +293,7 @@ CREATE TABLE dbo.Brand
     CONSTRAINT PK_Brand PRIMARY KEY (Id)
 );
 CREATE UNIQUE INDEX UX_Brand_Name ON dbo.Brand (Name) WHERE IsDeleted = 0;
+CREATE UNIQUE INDEX UX_Brand_Slug ON dbo.Brand (Slug) WHERE IsDeleted = 0;
 GO
 
 -- Product [Audit]: one master product per real part. Seller proposals are
@@ -527,19 +534,9 @@ CREATE INDEX IX_StockMovement_OfferId_CreatedAt ON dbo.StockMovement (OfferId, C
 GO
 
 /* =====================================================================
-   5. Seed data (Phase 1: roles and a few brands).
-   Catalog seed (categories, specs, 30+ products) arrives in Phase 3.
+   Seed data (roles, brands, catalog) lives in Database/seed.sql.
+   Run it after this script.
    ===================================================================== */
-
-INSERT INTO dbo.AspNetRoles (Name, NormalizedName, ConcurrencyStamp)
-VALUES (N'Admin',    N'ADMIN',    CONVERT(nvarchar(36), NEWID())),
-       (N'Seller',   N'SELLER',   CONVERT(nvarchar(36), NEWID())),
-       (N'Customer', N'CUSTOMER', CONVERT(nvarchar(36), NEWID()));
-
-INSERT INTO dbo.Brand (Name)
-VALUES (N'AMD'), (N'ASUS'), (N'Corsair'), (N'G.Skill'), (N'Intel'),
-       (N'Kingston'), (N'MSI'), (N'NVIDIA'), (N'Samsung'), (N'Western Digital');
-GO
 
 SET NOEXEC OFF;
 GO

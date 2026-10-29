@@ -11,6 +11,8 @@ public partial class SpecOption
 
     public string Value { get; set; } = null!;
 
+    public string Slug { get; set; } = null!;
+
     public int SortOrder { get; set; }
 
     public DateTime CreatedAt { get; set; }

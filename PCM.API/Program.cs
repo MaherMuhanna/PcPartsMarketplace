@@ -85,7 +85,7 @@ try
     app.MapControllers();
     app.MapHealthChecks("/health");
 
-    // Demo accounts for local runs and Docker (Development only; see README for the logins).
+    // Demo accounts and demo product proposals for local runs and Docker (Development only; see README).
     if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Seed:DemoUsers"))
     {
         await SeedDemoUsersAsync(app);
@@ -110,11 +110,14 @@ static async Task SeedDemoUsersAsync(WebApplication app)
         await using var scope = app.Services.CreateAsyncScope();
         var seeder = scope.ServiceProvider.GetRequiredService<DemoUserSeeder>();
         await seeder.SeedAsync(app.Configuration["Seed:DemoPassword"] ?? string.Empty);
+
+        // Needs seller1 (created just above) and the catalog from Database/seed.sql.
+        await scope.ServiceProvider.GetRequiredService<DemoCatalogSeeder>().SeedAsync();
     }
     catch (Exception ex)
     {
         // A missing database should not stop the API from starting; /health will report it.
-        Log.Error(ex, "Seeding demo users failed");
+        Log.Error(ex, "Seeding demo data failed");
     }
 }
 

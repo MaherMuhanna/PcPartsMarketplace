@@ -1,0 +1,352 @@
+@model CatalogViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    var path = Url.Action("Index", "Catalog")!;
+    var query = Model.Query;
+    var filters = Model.Filters;
+    var products = Model.Products;
+    var activePath = filters.Path.Select(c => c.Slug).ToHashSet();
+    var selectedBrands = query.GetSet("brand");
+    var currentSort = query.Get("sort") ?? "newest";
+    var sortLabel = CatalogViewModel.SortOptions.FirstOrDefault(o => o.Value == currentSort).Label ?? "Newest";
+
+    // Link that removes one value from a multi-value key (brand=amd,intel -> brand=intel).
+    string WithoutValue(string key, string value) =>
+        query.With(key, string.Join(',', query.GetSet(key).Where(v => !string.Equals(v, value, StringComparison.OrdinalIgnoreCase))))
+             .Without("page").ToUrl(path);
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item @(filters.Path.Count == 0 ? "active" : "")"><a href="@Model.CategoryUrl(path, null)">Catalog</a></li>
+        @foreach (var crumb in filters.Path)
+        {
+            <li class="breadcrumb-item"><a href="@Model.CategoryUrl(path, crumb.Slug)">@crumb.Name</a></li>
+        }
+    </ol>
+</nav>
+
+<div class="row g-4">
+    @* ---------------- Sidebar: categories and filters ---------------- *@
+    <aside class="col-lg-3">
+        <button class="btn btn-outline-secondary w-100 d-lg-none mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#catalogSidebar" aria-expanded="false" aria-controls="catalogSidebar">
+            Categories and filters
+        </button>
+
+        <div class="collapse d-lg-block" id="catalogSidebar">
+            <div class="card mb-3">
+                <div class="card-header fw-semibold">Categories</div>
+                <ul class="list-group list-group-flush category-list">
+                    <li class="list-group-item"><a href="@Model.CategoryUrl(path, null)" class="@(filters.Category is null ? "fw-semibold" : "")">All products</a></li>
+                    @foreach (var root in Model.Categories)
+                    {
+                        <li class="list-group-item">
+                            <a href="@Model.CategoryUrl(path, root.Slug)" class="@(activePath.Contains(root.Slug) ? "fw-semibold" : "")">@root.Name</a>
+                            @if (root.Children.Count > 0)
+                            {
+                                <ul class="list-unstyled ms-3 mt-1 mb-0">
+                                    @foreach (var child in root.Children)
+                                    {
+                                        <li class="py-1">
+                                            <a href="@Model.CategoryUrl(path, child.Slug)" class="@(activePath.Contains(child.Slug) ? "fw-semibold" : "text-body")">@child.Name</a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <form method="get" action="@path" class="card filter-form">
+                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                    Filters
+                    @if (Model.HasActiveFilters)
+                    {
+                        <a class="small fw-normal" href="@Model.CategoryUrl(path, filters.Category?.Slug)">Clear all</a>
+                    }
+                </div>
+                <div class="card-body">
+                    @* State that the form does not edit travels as hidden fields. *@
+                    @foreach (var key in new[] { "category", "q", "sort" })
+                    {
+                        if (query.Has(key))
+                        {
+                            <input type="hidden" name="@key" value="@query.Get(key)" />
+                        }
+                    }
+
+                    <fieldset class="mb-3">
+                        <legend class="h6">Price (@DisplayExtensions.Currency)</legend>
+                        <div class="d-flex gap-2">
+                            <input type="number" name="minPrice" id="minPrice" value="@query.Get("minPrice")" class="form-control form-control-sm" placeholder="Min" min="0" step="any" aria-label="Minimum price" />
+                            <input type="number" name="maxPrice" id="maxPrice" value="@query.Get("maxPrice")" class="form-control form-control-sm" placeholder="Max" min="0" step="any" aria-label="Maximum price" aria-describedby="priceError" />
+                        </div>
+                        <div id="priceError" class="small text-danger mt-1" hidden>Max must be at least Min.</div>
+                    </fieldset>
+
+                    @if (filters.Brands.Count > 0)
+                    {
+                        <fieldset class="mb-3">
+                            <legend class="h6">Brand</legend>
+                            @foreach (var brand in filters.Brands)
+                            {
+                                var id = $"brand-{brand.Slug}";
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="brand" value="@brand.Slug" id="@id" checked="@selectedBrands.Contains(brand.Slug)" />
+                                    <label class="form-check-label d-flex justify-content-between" for="@id">
+                                        <span>@brand.Name</span><span class="text-muted small">@brand.Count</span>
+                                    </label>
+                                </div>
+                            }
+                        </fieldset>
+                    }
+
+                    @foreach (var spec in filters.Attributes)
+                    {
+                        <fieldset class="mb-3">
+                            @* Number choices already carry the unit ("32 GB"), so only Enum legends show it. *@
+                            <legend class="h6">@(spec.Unit is null || spec.DataType != "Enum" ? spec.Name : $"{spec.Name} ({spec.Unit})")</legend>
+                            @if (spec.SingleChoice)
+                            {
+                                // Yes/No: one choice only (Any / Yes / No); ticking both would filter nothing.
+                                var current = query.Get(spec.Slug);
+                                var anyId = $"{spec.Slug}-any";
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="@spec.Slug" value="" id="@anyId" checked="@string.IsNullOrEmpty(current)" />
+                                    <label class="form-check-label" for="@anyId">Any</label>
+                                </div>
+                                foreach (var option in spec.Options)
+                                {
+                                    var id = $"{spec.Slug}-{option.Slug}";
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="@spec.Slug" value="@option.Slug" id="@id" checked="@string.Equals(current, option.Slug, StringComparison.OrdinalIgnoreCase)" />
+                                        <label class="form-check-label d-flex justify-content-between" for="@id">
+                                            <span>@option.Value</span><span class="text-muted small">@option.Count</span>
+                                        </label>
+                                    </div>
+                                }
+                            }
+                            else if (spec.DataType == "Enum")
+                            {
+                                var selected = query.GetSet(spec.Slug);
+                                foreach (var option in spec.Options.Where(o => o.Count > 0 || selected.Contains(o.Slug)))
+                                {
+                                    var id = $"{spec.Slug}-{option.Slug}";
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="@spec.Slug" value="@option.Slug" id="@id" checked="@selected.Contains(option.Slug)" />
+                                        <label class="form-check-label d-flex justify-content-between" for="@id">
+                                            <span>@option.Value</span><span class="text-muted small">@option.Count</span>
+                                        </label>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                // Number: a drop-down of the values products really have (16 GB, 32 GB, ...), pick any number of them.
+                                var selected = query.GetSet(spec.Slug);
+                                var chosen = spec.Options.Where(o => selected.Contains(o.Slug)).Select(o => o.Value).ToList();
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-between align-items-center filter-dropdown-toggle"
+                                            type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Choose @spec.Name">
+                                        <span class="text-truncate">@(chosen.Count == 0 ? "Any" : string.Join(", ", chosen))</span>
+                                        <span class="dropdown-toggle ms-2" aria-hidden="true"></span>
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2 filter-dropdown">
+                                        @foreach (var option in spec.Options)
+                                        {
+                                            var id = $"{spec.Slug}-{option.Slug}";
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="@spec.Slug" value="@option.Slug" id="@id" checked="@selected.Contains(option.Slug)" />
+                                                <label class="form-check-label d-flex justify-content-between" for="@id">
+                                                    <span>@option.Value</span><span class="text-muted small">@option.Count</span>
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </fieldset>
+                    }
+
+                    @if (filters.Category is not null && !filters.IsLeaf)
+                    {
+                        <p class="small text-muted">Pick a subcategory to filter by specs.</p>
+                    }
+
+                    <button type="submit" class="btn btn-primary w-100">Apply filters</button>
+                </div>
+            </form>
+        </div>
+    </aside>
+
+    @* ---------------- Results ---------------- *@
+    <section class="col-lg-9">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+                <h1 class="h3 mb-0">@Model.Title</h1>
+                <div class="text-muted small">@products.TotalCount product(s)</div>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Sort: @sortLabel
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    @foreach (var (value, label) in CatalogViewModel.SortOptions)
+                    {
+                        <li>
+                            <a class="dropdown-item @(value == currentSort ? "active" : "")"
+                               href="@query.With("sort", value == "newest" ? null : value).Without("page").ToUrl(path)">@label</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        @if (filters.Children.Count > 0)
+        {
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @foreach (var child in filters.Children)
+                {
+                    <a class="btn btn-sm btn-outline-primary" href="@Model.CategoryUrl(path, child.Slug)">@child.Name</a>
+                }
+            </div>
+        }
+
+        @* Active filters as removable chips. *@
+        @if (Model.HasActiveFilters)
+        {
+            <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+                @if (query.Has("q"))
+                {
+                    <a class="badge rounded-pill text-bg-light border filter-chip" href="@query.Without("q", "page").ToUrl(path)">"@query.Get("q")" &times;</a>
+                }
+                @foreach (var brand in filters.Brands.Where(b => selectedBrands.Contains(b.Slug)))
+                {
+                    <a class="badge rounded-pill text-bg-light border filter-chip" href="@WithoutValue("brand", brand.Slug)">@brand.Name &times;</a>
+                }
+                @if (query.Has("minPrice") || query.Has("maxPrice"))
+                {
+                    <a class="badge rounded-pill text-bg-light border filter-chip" href="@query.Without("minPrice", "maxPrice", "page").ToUrl(path)">
+                        Price @(query.Get("minPrice") ?? "0") to @(query.Get("maxPrice") ?? "any") &times;
+                    </a>
+                }
+                @foreach (var spec in filters.Attributes.Where(a => query.Has(a.Slug)))
+                {
+                    if (spec.DataType == "Enum" || !query.Get(spec.Slug)!.Contains('-'))
+                    {
+                        // One removable chip per picked value (Enum option or Number value).
+                        foreach (var option in spec.Options.Where(o => query.GetSet(spec.Slug).Contains(o.Slug)))
+                        {
+                            <a class="badge rounded-pill text-bg-light border filter-chip" href="@WithoutValue(spec.Slug, option.Slug)">@spec.Name: @option.Value &times;</a>
+                        }
+                    }
+                    else
+                    {
+                        @* A range typed into the URL by hand, e.g. capacity=16-64. *@
+                        var (min, max) = query.GetRange(spec.Slug);
+                        <a class="badge rounded-pill text-bg-light border filter-chip" href="@query.Without(spec.Slug, "page").ToUrl(path)">
+                            @spec.Name: @(min.Length == 0 ? "any" : min) to @(max.Length == 0 ? "any" : max) @spec.Unit &times;
+                        </a>
+                    }
+                }
+            </div>
+        }
+
+        @if (Model.Error is not null)
+        {
+            <div class="alert alert-warning">@Model.Error</div>
+        }
+
+        @if (products.Items.Count == 0)
+        {
+            <div class="alert alert-info">
+                No products match these filters.
+                @if (Model.HasActiveFilters)
+                {
+                    <a href="@Model.CategoryUrl(path, filters.Category?.Slug)" class="alert-link">Clear the filters</a>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+                @foreach (var product in products.Items)
+                {
+                    <div class="col"><partial name="_ProductCard" model="product" /></div>
+                }
+            </div>
+
+            @if (products.TotalPages > 1)
+            {
+                var first = Math.Max(1, products.Page - 2);
+                var last = Math.Min(products.TotalPages, products.Page + 2);
+                <nav aria-label="Product pages" class="mt-4">
+                    <ul class="pagination justify-content-center flex-wrap">
+                        <li class="page-item @(products.Page == 1 ? "disabled" : "")">
+                            <a class="page-link" href="@Model.PageUrl(path, products.Page - 1)">Previous</a>
+                        </li>
+                        @if (first > 1)
+                        {
+                            <li class="page-item"><a class="page-link" href="@Model.PageUrl(path, 1)">1</a></li>
+                            if (first > 2)
+                            {
+                                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                            }
+                        }
+                        @for (var p = first; p <= last; p++)
+                        {
+                            <li class="page-item @(p == products.Page ? "active" : "")"><a class="page-link" href="@Model.PageUrl(path, p)">@p</a></li>
+                        }
+                        @if (last < products.TotalPages)
+                        {
+                            if (last < products.TotalPages - 1)
+                            {
+                                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                            }
+                            <li class="page-item"><a class="page-link" href="@Model.PageUrl(path, products.TotalPages)">@products.TotalPages</a></li>
+                        }
+                        <li class="page-item @(products.Page == products.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="@Model.PageUrl(path, products.Page + 1)">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        // Price range: Max may not be below Min (equal is fine). The API rejects it too (400);
+        // this stops the request before it is sent and says why, without changing what the user typed.
+        (() => {
+            const form = document.querySelector('.filter-form');
+            const min = document.getElementById('minPrice');
+            const max = document.getElementById('maxPrice');
+            const error = document.getElementById('priceError');
+
+            const check = () => {
+                const low = parseFloat(min.value);
+                const high = parseFloat(max.value);
+                max.min = Number.isNaN(low) ? '0' : String(low);   // the browser's spinner and validation follow Min
+                const invalid = !Number.isNaN(low) && !Number.isNaN(high) && high < low;
+                max.setCustomValidity(invalid ? 'Max must be at least Min.' : '');
+                max.classList.toggle('is-invalid', invalid);
+                error.hidden = !invalid;
+                return !invalid;
+            };
+
+            min.addEventListener('input', check);
+            max.addEventListener('input', check);
+            form.addEventListener('submit', event => {
+                if (!check()) {
+                    event.preventDefault();
+                    max.focus();
+                }
+            });
+            check();
+        })();
+    </script>
+}

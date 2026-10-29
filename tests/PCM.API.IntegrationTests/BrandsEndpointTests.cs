@@ -12,15 +12,18 @@ public sealed class BrandsEndpointTests(ApiFactory factory)
 {
     private readonly HttpClient _client = factory.CreateClient();
 
+    /// <summary>Brands from Database/seed.sql. Other tests may add brands, so this is a lower bound.</summary>
+    private const int SeededBrands = 17;
+
     [Fact]
     public async Task Get_brands_returns_seeded_brands_sorted_by_name()
     {
         var response = await _client.GetFromJsonAsync<PagedResponse<BrandDto>>(
-            "/api/v1/brands", TestContext.Current.CancellationToken);
+            "/api/v1/brands?pageSize=100", TestContext.Current.CancellationToken);
 
         Assert.NotNull(response);
-        Assert.Equal(10, response.TotalCount);
-        Assert.Equal("AMD", response.Items[0].Name);
+        Assert.True(response.TotalCount >= SeededBrands);
+        Assert.Contains(response.Items, b => b is { Name: "G.Skill", Slug: "g-skill" });
         Assert.Equal(response.Items.Select(b => b.Name).Order(StringComparer.OrdinalIgnoreCase), response.Items.Select(b => b.Name));
     }
 
@@ -33,8 +36,8 @@ public sealed class BrandsEndpointTests(ApiFactory factory)
         Assert.NotNull(response);
         Assert.Equal(3, response.Items.Count);
         Assert.Equal(2, response.Page);
-        Assert.Equal(10, response.TotalCount);
-        Assert.Equal(4, response.TotalPages);
+        Assert.True(response.TotalCount >= SeededBrands);
+        Assert.Equal((int)Math.Ceiling(response.TotalCount / 3.0), response.TotalPages);
     }
 
     [Theory]

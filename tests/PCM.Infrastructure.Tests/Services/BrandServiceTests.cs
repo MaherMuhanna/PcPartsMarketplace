@@ -24,13 +24,13 @@ public sealed class BrandServiceTests
     public async Task GetBrandsAsync_maps_entities_and_paging_metadata()
     {
         var page = new PagedResult<Brand>(
-            [new Brand { Id = 1, Name = "AMD" }, new Brand { Id = 2, Name = "Corsair", LogoUrl = "https://cdn/corsair.png" }],
+            [new Brand { Id = 1, Name = "AMD", Slug = "amd" }, new Brand { Id = 2, Name = "Corsair", Slug = "corsair", LogoUrl = "https://cdn/corsair.png" }],
             Page: 2, PageSize: 2, TotalCount: 5);
         _brands.GetPagedAsync(2, 2, BrandSort.NameAsc, Arg.Any<CancellationToken>()).Returns(page);
 
         var result = await _service.GetBrandsAsync(new BrandListQuery { Page = 2, PageSize = 2 }, TestContext.Current.CancellationToken);
 
-        Assert.Equal([new BrandDto(1, "AMD", null), new BrandDto(2, "Corsair", "https://cdn/corsair.png")], result.Items);
+        Assert.Equal([new BrandDto(1, "AMD", "amd", null), new BrandDto(2, "Corsair", "corsair", "https://cdn/corsair.png")], result.Items);
         Assert.Equal(2, result.Page);
         Assert.Equal(2, result.PageSize);
         Assert.Equal(5, result.TotalCount);
