@@ -58,6 +58,7 @@ try
     builder.Services.AddHttpClient<IAddressesApiClient, AddressesApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
     builder.Services.AddHttpClient<IAdminSellersApiClient, AdminSellersApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
     builder.Services.AddHttpClient<ISellerProfileApiClient, SellerProfileApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
+    builder.Services.AddHttpClient<ISellerOffersApiClient, SellerOffersApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
 
     var app = builder.Build();
 

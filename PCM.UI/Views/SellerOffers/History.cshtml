@@ -1,0 +1,111 @@
+@model OfferHistoryViewModel
+@{
+    var offer = Model.Offer;
+    var movements = Model.Movements;
+    ViewData["Title"] = $"Stock history: {offer.ProductName}";
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+
+    static string BadgeFor(string reason) => reason switch
+    {
+        "Restock" => "text-bg-success",
+        "Adjustment" => "text-bg-info",
+        "Reserve" => "text-bg-warning",
+        "Release" => "text-bg-light border",
+        "Sale" => "text-bg-primary",
+        _ => "text-bg-secondary"
+    };
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">My offers</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Stock history</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+    <div class="d-flex gap-3 align-items-center">
+        <img src="@(offer.ImageUrl ?? DisplayExtensions.PlaceholderImage)" alt="" class="offer-thumb-lg border rounded" />
+        <div>
+            <h1 class="h4 mb-1">@offer.ProductName</h1>
+            <span class="badge @(offer.Condition == "New" ? "text-bg-primary" : "text-bg-secondary")">@offer.Condition</span>
+            <span class="ms-2">@offer.Price.ToPrice()</span>
+            @if (!offer.ProductIsPublished)
+            {
+                <span class="badge text-bg-secondary ms-1">Hidden: product deactivated</span>
+            }
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary"
+                data-bs-toggle="modal" data-bs-target="#stockModal"
+                data-action="@Url.Action("Stock", new { id = offer.Id })"
+                data-title="@offer.ProductName (@offer.Condition)"
+                data-stock="@offer.Stock" data-reserved="@offer.ReservedStock">Change stock</button>
+        <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@offer.Id">Edit</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4 text-center">
+    <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="small text-muted">Stock</div><div class="fs-4">@offer.Stock</div></div></div>
+    <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="small text-muted">Reserved</div><div class="fs-4">@offer.ReservedStock</div></div></div>
+    <div class="col-6 col-md-3">
+        <div class="border rounded p-2 @(offer.IsLowStock ? "border-warning" : "")">
+            <div class="small text-muted">Available</div>
+            <div class="fs-4 @(offer.Available == 0 ? "text-danger" : offer.IsLowStock ? "text-warning-emphasis" : "")">@offer.Available</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="small text-muted">Low-stock alert at</div><div class="fs-4">@offer.LowStockThreshold</div></div></div>
+</div>
+
+<h2 class="h5">History</h2>
+@if (movements.Items.Count == 0)
+{
+    <p class="text-muted">No stock movements yet.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Date (UTC)</th>
+                    <th>Type</th>
+                    <th class="text-end">Change</th>
+                    <th class="text-end">Stock after</th>
+                    <th class="text-end">Reserved after</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var movement in movements.Items)
+                {
+                    <tr>
+                        <td class="small text-nowrap">@movement.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td><span class="badge @BadgeFor(movement.Reason)">@movement.Reason</span></td>
+                        <td class="text-end font-monospace @(movement.Change > 0 ? "text-success" : "text-danger")">@movement.Change.ToString("+#;-#")</td>
+                        <td class="text-end">@movement.StockAfter</td>
+                        <td class="text-end">@movement.ReservedStockAfter</td>
+                        <td class="small">@movement.Note</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (movements.TotalPages > 1)
+    {
+        <nav aria-label="History pages">
+            <ul class="pagination">
+                @for (var p = 1; p <= movements.TotalPages; p++)
+                {
+                    <li class="page-item @(p == movements.Page ? "active" : "")">
+                        <a class="page-link" asp-action="History" asp-route-id="@offer.Id" asp-route-page="@p">@p</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+}
+
+<partial name="_StockModal" model="returnUrl" />

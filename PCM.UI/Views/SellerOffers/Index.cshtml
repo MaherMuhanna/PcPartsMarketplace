@@ -1,0 +1,146 @@
+@model SellerOffersViewModel
+@{
+    ViewData["Title"] = "My offers";
+    var offers = Model.Offers;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">My offers</h1>
+    <a class="btn btn-primary" asp-action="Create">Add offer</a>
+</div>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in SellerOffersViewModel.StockTabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(string.Equals(tab.Value, Model.Stock, StringComparison.OrdinalIgnoreCase) ? "active" : "")"
+               asp-action="Index" asp-route-stock="@tab.Value" asp-route-q="@Model.Q" asp-route-condition="@Model.Condition" asp-route-sort="@Model.Sort">@tab.Label</a>
+        </li>
+    }
+</ul>
+
+@* Filters keep the current tab; changing them starts again at page 1. *@
+<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3">
+    <input type="hidden" name="stock" value="@Model.Stock" />
+    <div class="col-sm-5 col-lg-4">
+        <label for="q" class="form-label small mb-1">Product</label>
+        <input type="search" id="q" name="q" value="@Model.Q" class="form-control form-control-sm" maxlength="100" placeholder="Name or model number" />
+    </div>
+    <div class="col-6 col-sm-3 col-lg-2">
+        <label for="condition" class="form-label small mb-1">Condition</label>
+        <select id="condition" name="condition" class="form-select form-select-sm">
+            <option value="" selected="@(string.IsNullOrEmpty(Model.Condition))">Any</option>
+            <option value="New" selected="@(Model.Condition == "New")">New</option>
+            <option value="Used" selected="@(Model.Condition == "Used")">Used</option>
+        </select>
+    </div>
+    <div class="col-6 col-sm-4 col-lg-3">
+        <label for="sort" class="form-label small mb-1">Sort</label>
+        <select id="sort" name="sort" class="form-select form-select-sm">
+            @foreach (var option in SellerOffersViewModel.SortOptions)
+            {
+                <option value="@option.Value" selected="@(option.Value == (Model.Sort ?? "newest"))">@option.Label</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+    </div>
+</form>
+
+<p class="text-muted small">@offers.TotalCount offer(s)</p>
+
+@if (offers.Items.Count == 0)
+{
+    <div class="alert alert-info">
+        No offers here. <a class="alert-link" asp-action="Create">Add your first offer</a> by picking a product from the catalog.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Condition</th>
+                    <th class="text-end">Price</th>
+                    <th class="text-end">Stock</th>
+                    <th class="text-end">Reserved</th>
+                    <th class="text-end">Available</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var offer in offers.Items)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="@(offer.ImageUrl ?? DisplayExtensions.PlaceholderImage)" alt="" class="offer-thumb border rounded" />
+                                <div>
+                                    @if (offer.ProductIsPublished)
+                                    {
+                                        <a asp-controller="Products" asp-action="Details" asp-route-slug="@offer.ProductSlug" class="fw-semibold text-decoration-none">@offer.ProductName</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="fw-semibold">@offer.ProductName</span>
+                                        <span class="badge text-bg-secondary ms-1" title="An admin deactivated this product; customers cannot see the offer.">Hidden</span>
+                                    }
+                                    <div class="text-muted small font-monospace">@offer.ProductModelNumber</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge @(offer.Condition == "New" ? "text-bg-primary" : "text-bg-secondary")">@offer.Condition</span></td>
+                        <td class="text-end text-nowrap">@offer.Price.ToPrice()</td>
+                        <td class="text-end">@offer.Stock</td>
+                        <td class="text-end">@offer.ReservedStock</td>
+                        <td class="text-end text-nowrap">
+                            @offer.Available
+                            @if (offer.Available == 0)
+                            {
+                                <span class="badge text-bg-danger ms-1">Out</span>
+                            }
+                            else if (offer.IsLowStock)
+                            {
+                                <span class="badge text-bg-warning ms-1" title="Alert at @offer.LowStockThreshold or less">Low</span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal" data-bs-target="#stockModal"
+                                    data-action="@Url.Action("Stock", new { id = offer.Id })"
+                                    data-title="@offer.ProductName (@offer.Condition)"
+                                    data-stock="@offer.Stock" data-reserved="@offer.ReservedStock">Stock</button>
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@offer.Id">Edit</a>
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="History" asp-route-id="@offer.Id">History</a>
+                            <form asp-action="Delete" asp-route-id="@offer.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('Delete this offer? Customers will no longer see it.');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (offers.TotalPages > 1)
+    {
+        <nav aria-label="Offer pages">
+            <ul class="pagination">
+                @for (var p = 1; p <= offers.TotalPages; p++)
+                {
+                    <li class="page-item @(p == offers.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-page="@p" asp-route-stock="@Model.Stock"
+                           asp-route-q="@Model.Q" asp-route-condition="@Model.Condition" asp-route-sort="@Model.Sort">@p</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+}
+
+<partial name="_StockModal" model="returnUrl" />

@@ -88,3 +88,24 @@ html {
 .filter-dropdown-toggle {
     text-align: start;
 }
+
+/* ---- Seller offers ---- */
+.offer-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    background: #fff;
+    padding: 2px;
+}
+
+.offer-thumb-lg {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    background: #fff;
+    padding: 4px;
+}
+
+.picker-search {
+    max-width: 640px;
+}

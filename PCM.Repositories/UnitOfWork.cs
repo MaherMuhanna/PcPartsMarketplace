@@ -27,6 +27,8 @@ public sealed class UnitOfWork(PcPartsContext context, AuthDbContext authContext
     private ISpecAttributeRepository? _specAttributes;
     private IRepository<SpecOption>? _specOptions;
     private IProductRepository? _products;
+    private IOfferRepository? _offers;
+    private IStockMovementRepository? _stockMovements;
 
     public IBrandRepository Brands => _brands ??= new BrandRepository(context);
 
@@ -44,8 +46,14 @@ public sealed class UnitOfWork(PcPartsContext context, AuthDbContext authContext
 
     public IProductRepository Products => _products ??= new ProductRepository(context);
 
+    public IOfferRepository Offers => _offers ??= new OfferRepository(context);
+
+    public IStockMovementRepository StockMovements => _stockMovements ??= new StockMovementRepository(context);
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
+
+    public void ClearChanges() => context.ChangeTracker.Clear();
 
     public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

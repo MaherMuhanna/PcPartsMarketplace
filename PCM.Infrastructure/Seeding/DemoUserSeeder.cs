@@ -27,6 +27,7 @@ public sealed class DemoUserSeeder(
         new("admin@pcm.local", "Site Admin", Roles.Admin),
         new("seller1@pcm.local", "Omar Haddad", Roles.Seller, "Tech Hub", SellerStatus.Approved),
         new("seller2@pcm.local", "Lina Saleh", Roles.Seller, "Byte Corner", SellerStatus.Pending),
+        new("seller3@pcm.local", "Yousef Khalil", Roles.Seller, "Circuit Store", SellerStatus.Approved),
         new("customer@pcm.local", "Rami Nasser", Roles.Customer)
     ];
 
