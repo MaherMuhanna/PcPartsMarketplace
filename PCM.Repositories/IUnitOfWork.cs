@@ -27,8 +27,18 @@ public interface IUnitOfWork
 
     IProductRepository Products { get; }
 
+    IOfferRepository Offers { get; }
+
+    IStockMovementRepository StockMovements { get; }
+
     /// <summary>Persists all staged changes in one round trip; returns rows affected.</summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forgets every tracked entity and staged change. Used before retrying an operation
+    /// after a concurrency conflict, so the retry reloads fresh rows from the database.
+    /// </summary>
+    void ClearChanges();
 
     /// <summary>
     /// Starts a database transaction. Dispose without commit = rollback.

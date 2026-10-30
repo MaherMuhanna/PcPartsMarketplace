@@ -102,6 +102,15 @@ public class ProductRepository(PcPartsContext context) : Repository<Product>(con
             .Select(o => new ProductOfferRow(o.Id, o.SellerId, o.Seller.StoreName, o.Condition, o.Price, o.Stock - o.ReservedStock))
             .ToListAsync(cancellationToken);
 
+    public Task<bool> IsPublishedAsync(int id, CancellationToken cancellationToken = default) =>
+        Published.AnyAsync(p => p.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyDictionary<string, int>> GetPublishedIdsBySlugsAsync(
+        IReadOnlyCollection<string> slugs, CancellationToken cancellationToken = default) =>
+        await Published
+            .Where(p => slugs.Contains(p.Slug))
+            .ToDictionaryAsync(p => p.Slug, p => p.Id, cancellationToken);
+
     public async Task<IReadOnlyList<FacetCount>> GetBrandFacetsAsync(IReadOnlyCollection<int>? categoryIds, CancellationToken cancellationToken = default)
     {
         var query = Published;

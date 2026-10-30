@@ -37,6 +37,10 @@
                             }
                             @if (User.IsInRole(Roles.Seller))
                             {
+                                @if (sellerStatus == "Approved")
+                                {
+                                    <li class="nav-item"><a class="nav-link" asp-controller="SellerOffers" asp-action="Index">My offers</a></li>
+                                }
                                 <li class="nav-item"><a class="nav-link" asp-controller="Store" asp-action="Index">My store</a></li>
                             }
                             @if (User.IsInRole(Roles.Customer))

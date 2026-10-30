@@ -14,6 +14,8 @@ public interface ICatalogApiClient
     Task<PagedResponse<ProductListItemDto>> SearchAsync(string queryString, CancellationToken cancellationToken = default);
 
     Task<ProductDetailsDto> GetProductBySlugAsync(string slug, CancellationToken cancellationToken = default);
+
+    Task<ProductDetailsDto> GetProductByIdAsync(int id, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Typed client for the public catalog endpoints (anonymous, so no token handler).</summary>
@@ -36,4 +38,7 @@ public sealed class CatalogApiClient(HttpClient httpClient) : ApiClientBase(http
 
     public Task<ProductDetailsDto> GetProductBySlugAsync(string slug, CancellationToken cancellationToken = default) =>
         GetAsync<ProductDetailsDto>($"api/v1/products/by-slug/{Uri.EscapeDataString(slug)}", cancellationToken);
+
+    public Task<ProductDetailsDto> GetProductByIdAsync(int id, CancellationToken cancellationToken = default) =>
+        GetAsync<ProductDetailsDto>($"api/v1/products/{id}", cancellationToken);
 }

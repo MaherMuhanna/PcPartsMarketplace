@@ -1,0 +1,93 @@
+@model string
+@*
+    One "Change stock" modal per page. The button that opens it sets the form action and the
+    product name (data-action, data-title, data-stock, data-reserved). The page's own URL is
+    posted as returnUrl so the seller lands back where they were.
+    The browser checks are a convenience only: the API applies the same rules (Restock > 0,
+    Adjustment needs a note, stock never below reserved).
+*@
+<div class="modal fade" id="stockModal" tabindex="-1" aria-labelledby="stockModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content" id="stockForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@Model" />
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="stockModalTitle">Change stock</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3" id="stockModalNumbers"></p>
+
+                <fieldset class="mb-3">
+                    <legend class="form-label fs-6">Type</legend>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type" id="typeRestock" value="Restock" checked />
+                        <label class="form-check-label" for="typeRestock">Restock <span class="text-muted small">(goods received, adds stock)</span></label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type" id="typeAdjustment" value="Adjustment" />
+                        <label class="form-check-label" for="typeAdjustment">Adjustment <span class="text-muted small">(stock count, damage, returns: + or -)</span></label>
+                    </div>
+                </fieldset>
+
+                <div class="mb-3">
+                    <label for="stockChange" class="form-label" id="stockChangeLabel">Quantity to add</label>
+                    <input type="number" id="stockChange" name="change" class="form-control" step="1" min="1" max="100000" required />
+                    <div class="form-text" id="stockChangeHelp">Whole units.</div>
+                </div>
+
+                <div class="mb-0">
+                    <label for="stockNote" class="form-label">Note <span id="stockNoteHint" class="text-muted small">(optional)</span></label>
+                    <input type="text" id="stockNote" name="note" class="form-control" maxlength="300" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modal = document.getElementById('stockModal');
+        const form = document.getElementById('stockForm');
+        const change = document.getElementById('stockChange');
+        const note = document.getElementById('stockNote');
+        let stock = 0, reserved = 0;
+
+        // Restock: positive only, note optional. Adjustment: + or -, never below reserved, note required.
+        function applyType() {
+            const restock = document.getElementById('typeRestock').checked;
+            change.min = restock ? 1 : -(stock - reserved);
+            document.getElementById('stockChangeLabel').textContent = restock ? 'Quantity to add' : 'Change (+ adds, - removes)';
+            document.getElementById('stockChangeHelp').textContent = restock
+                ? 'Whole units.'
+                : `Whole units, not zero. You can remove at most ${stock - reserved} (reserved units stay).`;
+            note.required = !restock;
+            note.minLength = restock ? 0 : 3;
+            document.getElementById('stockNoteHint').textContent = restock ? '(optional)' : '(required, at least 3 characters)';
+        }
+
+        document.querySelectorAll('#stockForm input[name="type"]').forEach(radio => radio.addEventListener('change', applyType));
+
+        // Zero is never a valid change.
+        change.addEventListener('input', () => change.setCustomValidity(change.value === '0' ? 'Enter a non-zero quantity.' : ''));
+
+        modal.addEventListener('show.bs.modal', event => {
+            const trigger = event.relatedTarget;
+            stock = Number(trigger.dataset.stock);
+            reserved = Number(trigger.dataset.reserved);
+            form.action = trigger.dataset.action;
+            document.getElementById('stockModalTitle').textContent = `Change stock: ${trigger.dataset.title}`;
+            document.getElementById('stockModalNumbers').textContent =
+                `Stock ${stock}, reserved ${reserved}, available ${stock - reserved}.`;
+            document.getElementById('typeRestock').checked = true;
+            change.value = '';
+            note.value = '';
+            change.setCustomValidity('');
+            applyType();
+        });
+    })();
+</script>

@@ -4,6 +4,9 @@
     var catalogPath = Url.Action("Index", "Catalog")!;
     IReadOnlyList<ProductImageDto> images = Model.Images.Count > 0 ? Model.Images : [new ProductImageDto(DisplayExtensions.PlaceholderImage, Model.Name, 0)];
     var cheapest = Model.Offers.Where(o => o.Available > 0).OrderBy(o => o.Price).FirstOrDefault();
+
+    // Approved sellers get a shortcut to offer this product (the API re-checks approval).
+    var canSell = User.IsInRole(Roles.Seller) && User.FindFirstValue(AppClaimTypes.SellerStatus) == "Approved";
 }
 
 <nav aria-label="breadcrumb">
@@ -60,6 +63,11 @@
         else
         {
             <div class="alert alert-light border mb-3">No seller offers this product yet.</div>
+        }
+
+        @if (canSell)
+        {
+            <a class="btn btn-outline-primary btn-sm mb-3" asp-controller="SellerOffers" asp-action="Create" asp-route-productId="@Model.Id">Sell this</a>
         }
 
         @if (!string.IsNullOrWhiteSpace(Model.Description))

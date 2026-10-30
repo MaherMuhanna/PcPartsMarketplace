@@ -85,7 +85,7 @@ try
     app.MapControllers();
     app.MapHealthChecks("/health");
 
-    // Demo accounts and demo product proposals for local runs and Docker (Development only; see README).
+    // Demo accounts, product proposals and offers for local runs and Docker (Development only; see README).
     if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Seed:DemoUsers"))
     {
         await SeedDemoUsersAsync(app);
@@ -113,6 +113,9 @@ static async Task SeedDemoUsersAsync(WebApplication app)
 
         // Needs seller1 (created just above) and the catalog from Database/seed.sql.
         await scope.ServiceProvider.GetRequiredService<DemoCatalogSeeder>().SeedAsync();
+
+        // Needs the approved demo sellers (seller1, seller3) and the published seed products.
+        await scope.ServiceProvider.GetRequiredService<DemoOfferSeeder>().SeedAsync();
     }
     catch (Exception ex)
     {

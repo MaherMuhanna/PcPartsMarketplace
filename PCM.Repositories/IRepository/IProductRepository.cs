@@ -25,6 +25,12 @@ public interface IProductRepository : IRepository<Product>
     /// <summary>Offers shown on the product page: approved sellers only, cheapest first.</summary>
     Task<IReadOnlyList<ProductOfferRow>> GetVisibleOffersAsync(int productId, CancellationToken cancellationToken = default);
 
+    /// <summary>True when the product is published (sellers can only offer published products).</summary>
+    Task<bool> IsPublishedAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>Slug to id of the published products among <paramref name="slugs"/> (unknown slugs are left out).</summary>
+    Task<IReadOnlyDictionary<string, int>> GetPublishedIdsBySlugsAsync(IReadOnlyCollection<string> slugs, CancellationToken cancellationToken = default);
+
     /// <summary>Published products per brand inside the given categories (null = all).</summary>
     Task<IReadOnlyList<FacetCount>> GetBrandFacetsAsync(IReadOnlyCollection<int>? categoryIds, CancellationToken cancellationToken = default);
 

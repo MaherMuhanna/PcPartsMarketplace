@@ -1,0 +1,48 @@
+@model OfferEditViewModel
+@{
+    ViewData["Title"] = "Edit offer";
+    var offer = Model.Offer!;
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">My offers</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Edit</li>
+    </ol>
+</nav>
+
+<div class="card auth-card shadow-sm">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-1">Edit offer</h1>
+        <p class="mb-3">
+            @offer.ProductName
+            <span class="badge @(offer.Condition == "New" ? "text-bg-primary" : "text-bg-secondary")">@offer.Condition</span>
+        </p>
+        <p class="text-muted small">
+            Stock @offer.Stock, reserved @offer.ReservedStock, available @offer.Available.
+            Stock changes use the <a asp-action="History" asp-route-id="@offer.Id">Stock button</a> so every change is recorded.
+        </p>
+
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post" novalidate>
+            <partial name="_FormErrors" />
+
+            <div class="mb-3">
+                <label asp-for="Price" class="form-label"></label>
+                <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" max="999999.99" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
+                <span asp-validation-for="Price" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="LowStockThreshold" class="form-label"></label>
+                <input asp-for="LowStockThreshold" class="form-control" type="number" step="1" min="0" max="1000" />
+                <div class="form-text">The offer shows as "Low" when available stock is at or below this number.</div>
+                <span asp-validation-for="LowStockThreshold" class="text-danger small"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

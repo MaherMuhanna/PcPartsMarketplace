@@ -77,7 +77,7 @@ public sealed record ProductSpecDto(
 
 public sealed record ProductImageDto(string Url, string? AltText, int SortOrder);
 
-/// <summary>A seller's offer on the product page (offers arrive in Phase 4).</summary>
+/// <summary>A seller's offer on the product page (approved sellers only; Available = Stock - ReservedStock).</summary>
 public sealed record ProductOfferDto(int OfferId, int SellerId, string StoreName, string Condition, decimal Price, int Available);
 
 // ---------------------------------------------------------------------

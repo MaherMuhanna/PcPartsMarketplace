@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IProductCatalogService, ProductCatalogService>();
         services.AddScoped<IProductAdminService, ProductAdminService>();
         services.AddScoped<ISellerProposalService, SellerProposalService>();
+        services.AddScoped<ISellerOfferService, SellerOfferService>();
         services.AddScoped<ProductEditor>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAddressService, AddressService>();
@@ -58,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<ISellerProfileService, SellerProfileService>();
         services.AddScoped<DemoUserSeeder>();
         services.AddScoped<DemoCatalogSeeder>();
+        services.AddScoped<DemoOfferSeeder>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly, ServiceLifetime.Singleton);
 
