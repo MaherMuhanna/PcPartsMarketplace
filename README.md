@@ -2,7 +2,7 @@
 
 Multi-vendor marketplace for computer parts (RAM, GPUs, CPUs, storage): an ASP.NET Core Web API plus an ASP.NET Core MVC frontend, on SQL Server with EF Core (Database-First), Repository + Unit of Work.
 
-> Status: **Phase 2 (Auth)** complete. See the roadmap below.
+> Status: **Phase 4 (Offers and inventory)** in progress. See the roadmap below.
 
 ## Tech stack
 
@@ -60,11 +60,12 @@ Created on API startup when the environment is Development (`Seed:DemoUsers`). P
 | Email | Role | Notes |
 | --- | --- | --- |
 | admin@pcm.local | Admin | Approves, rejects, suspends and reinstates sellers |
-| seller1@pcm.local | Seller | Store "Tech Hub", Approved; has one Pending and one Rejected product proposal |
+| seller1@pcm.local | Seller | Store "Tech Hub", Approved; 24 offers (some low or out of stock) and one Pending and one Rejected product proposal |
 | seller2@pcm.local | Seller | Store "Byte Corner", Pending (shows the review banner) |
+| seller3@pcm.local | Seller | Store "Circuit Store", Approved; 12 offers on the same products as Tech Hub at different prices |
 | customer@pcm.local | Customer | Has one default address |
 
-The two demo proposals need the catalog from `seed.sql`; if the API started before you ran it, restart the API.
+The demo proposals and offers need the catalog from `seed.sql`; if the API started before you ran it, restart the API. Seeding is idempotent: a seller who already has offers is skipped.
 
 ## Run with Docker (one command)
 
@@ -139,6 +140,27 @@ Search URL, built from slugs so links are readable and shareable:
 - Attributes are typed (Text, Number, Enum), so a new category needs rows, not schema changes. Number filters run as range queries on `ProductSpecValue.NumberValue` (indexed).
 - Seller proposals are `Product` rows with `Status = Pending`; only Approved and active products are public.
 
+## Offers and inventory
+
+One master product, many seller offers: each approved seller sells a catalog product in a condition (New or Used) at their own price and stock.
+
+| Endpoint | Who | Notes |
+| --- | --- | --- |
+| `GET /api/v1/seller/offers` | Approved seller | `q`, `condition`, `stock=all\|in\|low\|out`, `sort=newest\|name\|price\|-price\|available`, paging |
+| `GET /api/v1/seller/offers/low-stock` | Approved seller | Available at or below the offer's low-stock threshold |
+| `GET /api/v1/seller/offers/{id}` | Approved seller | Own offers only (404 otherwise) |
+| `POST /api/v1/seller/offers` | Approved seller | `{ productId, condition, price, stock, lowStockThreshold? }`; published products only; one per product + condition |
+| `PUT /api/v1/seller/offers/{id}` | Approved seller | `{ price, lowStockThreshold }` |
+| `PATCH /api/v1/seller/offers/{id}/stock` | Approved seller | `{ type: Restock\|Adjustment, change, note }` |
+| `DELETE /api/v1/seller/offers/{id}` | Approved seller | Soft delete; 409 while open orders hold reserved stock |
+| `GET /api/v1/seller/offers/{id}/movements` | Approved seller | Stock history, newest first |
+
+- **Available = Stock - ReservedStock**. Reserved units belong to placed orders (Phase 5), so stock can never drop below them (409), and the database CHECK `ReservedStock <= Stock` backs this up.
+- **Every stock change is audited**: `OfferStock.Apply` is the single place that changes `Offer.Stock`, and it appends a `StockMovement` (reason, signed change, stock after, user, note) in the same SaveChanges. Initial stock is recorded as a Restock.
+- **Optimistic concurrency**: `Offer.RowVersion` is a concurrency token. On a conflict the service discards its tracked state, reloads the offer and re-applies the change once (so the rules are checked against the new numbers); a second conflict returns 409.
+- **Low stock** means available stock at or below the seller's own threshold (default 5).
+- The MVC UI has "My offers" (stock tabs, filters, stock modal, history) and a "Sell this" button on product pages for approved sellers.
+
 ## Design decisions (so far)
 
 - **Database-First from a versioned script**: the schema is reviewed as SQL (types, constraints, filtered indexes) and the entities are generated from it.
@@ -153,7 +175,7 @@ Search URL, built from slugs so links are readable and shareable:
 1. ~~Foundation~~ ✔
 2. ~~Auth: Identity, JWT + refresh tokens, roles, seller approval~~ ✔
 3. ~~Catalog: categories, specs, products, search and filters, seed data~~ ✔
-4. Offers and inventory
+4. Offers and inventory (in progress)
 5. Cart and transactional checkout
 6. MVC UI
 7. Polish: tests, caching, diagrams, screenshots
