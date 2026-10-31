@@ -1,0 +1,228 @@
+@model AdminCategoriesViewModel
+@{
+    ViewData["Title"] = "Categories and specs";
+    var selected = Model.Selected;
+    var node = selected?.Node;
+    var parentId = selected is null ? (int?)null : Model.Tree.Flatten().FirstOrDefault(e => e.Node.Children.Any(c => c.Id == node!.Id))?.Node.Id;
+
+    // API rule: a category with attributes (or products) cannot get subcategories.
+    var canAddChild = node is not null && !(node.IsLeaf && Model.Attributes.Count > 0);
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Categories and specs</h1>
+    <span class="text-muted small">Products and spec attributes belong to leaf categories.</span>
+</div>
+
+<div class="row g-4">
+    @* ---- Tree ---- *@
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">Category tree</h2>
+                @if (Model.Tree.Count == 0)
+                {
+                    <p class="text-muted small">No categories yet.</p>
+                }
+                else
+                {
+                    <partial name="_CategoryTreeNodes" model="@(new CategoryTreeNodesModel(Model.Tree, node?.Id))" />
+                }
+                <hr />
+                <form asp-action="Create" method="post" class="d-flex gap-2">
+                    <input name="name" class="form-control form-control-sm" placeholder="New top-level category" maxlength="100" required aria-label="New top-level category name" />
+                    <input type="hidden" name="sortOrder" value="0" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* ---- Selected category ---- *@
+    <div class="col-lg-8">
+        @if (node is null)
+        {
+            <div class="alert alert-light border">Select a category on the left to rename it, add subcategories, or manage its spec attributes.</div>
+        }
+        else
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                            <div class="small text-muted">@selected!.PathText</div>
+                            <h2 class="h4 mb-1">@node.Name <span class="badge @(node.IsLeaf ? "text-bg-success" : "text-bg-secondary") align-middle fs-6 fw-normal">@(node.IsLeaf ? "leaf" : "parent")</span></h2>
+                            <div class="small text-muted">Slug <code>@node.Slug</code></div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a class="btn btn-sm btn-outline-secondary" asp-controller="Catalog" asp-action="Index" asp-route-category="@node.Slug">View in catalog</a>
+                            <form asp-action="Delete" asp-route-id="@node.Id" asp-route-parentId="@parentId" method="post"
+                                  data-confirm="Delete @node.Name? Only categories without subcategories and products can be deleted; its attributes are removed with it.">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <form asp-action="Edit" asp-route-id="@node.Id" method="post" class="row g-2 align-items-end">
+                        <div class="col-sm-6">
+                            <label for="categoryName" class="form-label small mb-1">Name</label>
+                            <input id="categoryName" name="name" value="@node.Name" class="form-control form-control-sm" maxlength="100" required />
+                        </div>
+                        <div class="col-sm-3">
+                            <label for="categorySort" class="form-label small mb-1">Order</label>
+                            <input id="categorySort" name="sortOrder" type="number" value="@node.SortOrder" class="form-control form-control-sm" min="0" max="10000" />
+                        </div>
+                        <div class="col-sm-3">
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Save</button>
+                        </div>
+                    </form>
+                    <p class="form-text mb-0">Renaming changes the slug, so old catalog links to this category stop working.</p>
+
+                    <hr />
+                    @if (canAddChild)
+                    {
+                        <form asp-action="Create" method="post" class="row g-2 align-items-end">
+                            <input type="hidden" name="parentId" value="@node.Id" />
+                            <div class="col-sm-6">
+                                <label for="childName" class="form-label small mb-1">Add a subcategory</label>
+                                <input id="childName" name="name" class="form-control form-control-sm" maxlength="100" required />
+                            </div>
+                            <div class="col-sm-3">
+                                <label for="childSort" class="form-label small mb-1">Order</label>
+                                <input id="childSort" name="sortOrder" type="number" value="0" class="form-control form-control-sm" min="0" max="10000" />
+                            </div>
+                            <div class="col-sm-3">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">Add subcategory</button>
+                            </div>
+                        </form>
+                        @if (node.IsLeaf)
+                        {
+                            <p class="form-text mb-0">Adding a subcategory turns this leaf into a parent. Not possible once it has products.</p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="small text-muted mb-0">This leaf has spec attributes, so it cannot get subcategories.</p>
+                    }
+                </div>
+            </div>
+
+            @if (node.IsLeaf)
+            {
+                <h2 class="h5">Spec attributes</h2>
+                <p class="small text-muted">What every product of <strong>@node.Name</strong> can describe. Filterable Number and Enum attributes become catalog filters.</p>
+
+                @if (Model.Attributes.Count == 0)
+                {
+                    <div class="alert alert-light border small">No attributes yet.</div>
+                }
+                else
+                {
+                    <div class="list-group mb-3">
+                        @foreach (var spec in Model.Attributes.OrderBy(a => a.SortOrder).ThenBy(a => a.Name))
+                        {
+                            var editId = $"attr{spec.Id}";
+                            <div class="list-group-item">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <div class="flex-grow-1">
+                                        <span class="fw-semibold">@spec.Name</span>
+                                        <span class="badge text-bg-light border ms-1">@(spec.Unit is null ? spec.DataType : $"{spec.DataType} ({spec.Unit})")</span>
+                                        @if (spec.IsFilterable)
+                                        {
+                                            <span class="badge text-bg-info ms-1">filter</span>
+                                        }
+                                        @if (spec.IsRequired)
+                                        {
+                                            <span class="badge text-bg-warning ms-1">required</span>
+                                        }
+                                        <div class="small text-muted">
+                                            <code>@spec.Slug</code>
+                                            @if (spec.DataType == "Enum")
+                                            {
+                                                <span>&middot; @(spec.Options.Count == 0 ? "no options yet" : string.Join(", ", spec.Options.OrderBy(o => o.SortOrder).Select(o => o.Value)))</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#@editId" aria-expanded="false" aria-controls="@editId">
+                                        @(spec.DataType == "Enum" ? "Edit and options" : "Edit")
+                                    </button>
+                                    <form asp-action="DeleteAttribute" asp-route-id="@node.Id" asp-route-attributeId="@spec.Id" method="post"
+                                          data-confirm="Delete the attribute @spec.Name? Not possible while products use it.">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                </div>
+
+                                <div class="collapse" id="@editId">
+                                    <form asp-action="EditAttribute" asp-route-id="@node.Id" asp-route-attributeId="@spec.Id" method="post" class="pt-3">
+                                        <partial name="_AttributeFields" model="@(new AttributeFieldsModel(spec))" />
+                                        <button type="submit" class="btn btn-sm btn-primary mt-2">Save attribute</button>
+                                        <span class="form-text ms-2">The type cannot change once products use the spec.</span>
+                                    </form>
+
+                                    @if (spec.DataType == "Enum")
+                                    {
+                                        <h3 class="h6 mt-3">Options</h3>
+                                        <table class="table table-sm align-middle mb-2">
+                                            <tbody>
+                                                @foreach (var option in spec.Options.OrderBy(o => o.SortOrder).ThenBy(o => o.Value))
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <form asp-action="EditOption" asp-route-id="@node.Id" asp-route-attributeId="@spec.Id" asp-route-optionId="@option.Id" method="post" class="d-flex gap-2">
+                                                                <input name="value" value="@option.Value" class="form-control form-control-sm" maxlength="100" required aria-label="Option value" />
+                                                                <input name="sortOrder" type="number" value="@option.SortOrder" class="form-control form-control-sm w-auto" min="0" max="10000" aria-label="Order" />
+                                                                <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                                                            </form>
+                                                        </td>
+                                                        <td class="small text-muted font-monospace">@option.Slug</td>
+                                                        <td class="text-end">
+                                                            <form asp-action="DeleteOption" asp-route-id="@node.Id" asp-route-attributeId="@spec.Id" asp-route-optionId="@option.Id" method="post"
+                                                                  data-confirm="Delete the option @option.Value? Not possible while products use it.">
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                        <form asp-action="CreateOption" asp-route-id="@node.Id" asp-route-attributeId="@spec.Id" method="post" class="d-flex gap-2">
+                                            <input name="value" class="form-control form-control-sm" maxlength="100" placeholder="New option, e.g. DDR5" required aria-label="New option value" />
+                                            <input name="sortOrder" type="number" value="@(spec.Options.Count == 0 ? 1 : spec.Options.Max(o => o.SortOrder) + 1)" class="form-control form-control-sm w-auto" min="0" max="10000" aria-label="Order" />
+                                            <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Add option</button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="h6">Add an attribute</h3>
+                        <form asp-action="CreateAttribute" asp-route-id="@node.Id" method="post">
+                            <partial name="_AttributeFields" model="@(new AttributeFieldsModel(null))" />
+                            <button type="submit" class="btn btn-sm btn-primary mt-2">Add attribute</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // A Text attribute cannot be a catalog filter: keep the checkbox off and disabled for Text.
+        document.querySelectorAll('select[data-attr-type]').forEach(select => {
+            const box = select.form.querySelector('[data-attr-filterable]');
+            const sync = () => {
+                const isText = select.value === 'Text';
+                if (isText) { box.checked = false; }
+                box.disabled = isText;
+            };
+            select.addEventListener('change', sync);
+            sync();
+        });
+    </script>
+}

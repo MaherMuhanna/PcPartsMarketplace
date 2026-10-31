@@ -1,0 +1,16 @@
+@model StatCardViewModel
+@* One number on a dashboard. The whole card is a link to the list behind the number. *@
+<div class="card stat-card h-100 @(Model.Highlight ? "border-warning" : "")">
+    <div class="card-body">
+        <div class="text-muted small">@Model.Label</div>
+        <div class="stat-value @Model.ValueCss">@Model.Value</div>
+        @if (Model.Hint is not null)
+        {
+            <div class="small text-muted">@Model.Hint</div>
+        }
+        @if (Model.Url is not null)
+        {
+            <a href="@Model.Url" class="stretched-link" aria-label="@Model.Label"></a>
+        }
+    </div>
+</div>

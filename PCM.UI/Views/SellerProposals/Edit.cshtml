@@ -1,0 +1,27 @@
+@model ProductFormViewModel
+@{
+    var proposal = Model.Product!;
+    ViewData["Title"] = $"Edit {proposal.Name}";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">Product proposals</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@proposal.Name</li>
+    </ol>
+</nav>
+
+<h1 class="h3 mb-1">@proposal.Name <partial name="_ProductStatusBadge" model="proposal.Status" /></h1>
+@if (proposal.Status == "Rejected")
+{
+    <div class="alert alert-danger small mt-2">
+        <strong>Rejected.</strong> @proposal.ReviewNote
+        <div class="mt-1">Fix the details below and save: the proposal goes back to the review queue.</div>
+    </div>
+}
+else
+{
+    <p class="text-muted small">Waiting for review. You can still change it until an admin approves it.</p>
+}
+
+<partial name="_ProductForm" model="Model" />

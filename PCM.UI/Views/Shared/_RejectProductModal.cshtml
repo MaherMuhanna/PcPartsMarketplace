@@ -1,0 +1,30 @@
+@* Reject dialog for product proposals. The button that opens it sets data-action (form URL) and data-title. *@
+<div class="modal fade" id="rejectProductModal" tabindex="-1" aria-labelledby="rejectProductTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content" id="rejectProductForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="rejectProductTitle">Reject proposal</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="rejectNote" class="form-label">Note for the seller <span class="text-muted small">(what to fix)</span></label>
+                <textarea id="rejectNote" name="note" class="form-control" rows="3" minlength="3" maxlength="500" required></textarea>
+                <div class="form-text">The seller can fix the proposal and send it again.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Back</button>
+                <button type="submit" class="btn btn-danger">Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    document.getElementById('rejectProductModal').addEventListener('show.bs.modal', event => {
+        const trigger = event.relatedTarget;
+        document.getElementById('rejectProductForm').action = trigger.dataset.action;
+        document.getElementById('rejectProductTitle').textContent = trigger.dataset.title;
+        document.getElementById('rejectNote').value = '';
+    });
+</script>

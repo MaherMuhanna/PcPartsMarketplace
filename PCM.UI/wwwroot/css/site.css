@@ -132,3 +132,57 @@ html {
     color: var(--bs-body-color);
     border-top-color: var(--bs-success);
 }
+
+/* ---- Layout ---- */
+.site-toasts {
+    z-index: 1090; /* above the sticky navbar and modals' backdrop */
+}
+
+.navbar .dropdown-item.active {
+    background-color: var(--bs-primary);
+}
+
+/* ---- Dashboards ---- */
+.stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.stat-card a.stretched-link {
+    text-decoration: none;
+}
+
+/* ---- Admin catalog ---- */
+.category-tree {
+    list-style: none;
+    padding-left: 0;
+}
+
+.category-tree .category-tree {
+    padding-left: 1.25rem;
+    border-left: 1px dashed var(--bs-border-color);
+    margin-left: 0.5rem;
+}
+
+.category-tree .tree-row {
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--bs-border-radius);
+}
+
+.category-tree .tree-row:hover {
+    background: var(--bs-tertiary-bg);
+}
+
+.image-row-preview {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    background: #fff;
+}
+
+.brand-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}

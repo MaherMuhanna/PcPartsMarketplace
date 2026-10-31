@@ -1,0 +1,68 @@
+@model ProductFormViewModel
+@{
+    var product = Model.Product!;
+    ViewData["Title"] = $"Edit {product.Name}";
+    var returnUrl = Context.Request.Path.ToString();
+    var isPublished = product.Status == "Approved" && product.IsActive;
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">Products</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@product.Name</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-1">@product.Name</h1>
+        <div class="small text-muted">
+            <partial name="_ProductStatusBadge" model="product.Status" />
+            @if (!product.IsActive)
+            {
+                <span class="badge text-bg-dark">hidden</span>
+            }
+            &middot; @(product.ProposedByStoreName is null ? "Added by an admin" : $"Proposed by {product.ProposedByStoreName}")
+            &middot; Added @product.CreatedAt.ToDisplayDate()
+            @if (product.UpdatedAt is { } updated)
+            {
+                <span>&middot; Changed @updated.ToDisplayDate()</span>
+            }
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        @if (isPublished)
+        {
+            <a class="btn btn-sm btn-outline-secondary" asp-controller="Products" asp-action="Details" asp-route-slug="@product.Slug">View in catalog</a>
+        }
+        @if (product.Status == "Pending")
+        {
+            <form asp-action="Approve" asp-route-id="@product.Id" method="post">
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+            </form>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectProductModal"
+                    data-action="@Url.Action("Reject", new { id = product.Id })" data-title="Reject @product.Name">Reject</button>
+        }
+        @if (product.Status == "Approved")
+        {
+            <form asp-action="@(product.IsActive ? "Deactivate" : "Activate")" asp-route-id="@product.Id" method="post"
+                  data-confirm="@(product.IsActive ? "Hide this product from the catalog? Offers stay but customers cannot see or buy it." : null)">
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-sm @(product.IsActive ? "btn-outline-warning" : "btn-outline-success")">@(product.IsActive ? "Hide from catalog" : "Show in catalog")</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (product.Status == "Pending")
+{
+    <div class="alert alert-warning small">This is a seller proposal waiting for review. You can correct it before approving; the seller sees your changes.</div>
+}
+else if (product.Status == "Rejected" && !string.IsNullOrEmpty(product.ReviewNote))
+{
+    <div class="alert alert-secondary small"><strong>Rejected:</strong> @product.ReviewNote</div>
+}
+
+<partial name="_ProductForm" model="Model" />
+<partial name="_RejectProductModal" />

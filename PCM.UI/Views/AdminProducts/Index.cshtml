@@ -1,0 +1,132 @@
+@model AdminProductsViewModel
+@{
+    ViewData["Title"] = Model.Status == "Pending" ? "Review queue" : "Products";
+    var products = Model.Products;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">@ViewData["Title"]</h1>
+    <a class="btn btn-primary" asp-action="Create">Add product</a>
+</div>
+
+<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3" role="search">
+    <input type="hidden" name="status" value="@Model.Status" />
+    <div class="col-md-4">
+        <label for="q" class="form-label small mb-1">Name or model</label>
+        <input type="search" id="q" name="q" value="@Model.Q" class="form-control" maxlength="100" />
+    </div>
+    <div class="col-md-4">
+        <label for="categoryId" class="form-label small mb-1">Category</label>
+        <select id="categoryId" name="categoryId" class="form-select">
+            <option value="">All categories</option>
+            @foreach (var category in Model.Categories)
+            {
+                <option value="@category.Node.Id" selected="@(category.Node.Id == Model.CategoryId)">@category.PathText</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label for="sort" class="form-label small mb-1">Sort</label>
+        <select id="sort" name="sort" class="form-select">
+            @foreach (var (value, label) in AdminProductsViewModel.SortOptions)
+            {
+                <option value="@(value ?? "")" selected="@(value == Model.Sort)">@label</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary flex-grow-1">Filter</button>
+        @if (Model.Q is not null || Model.CategoryId is not null || Model.Sort is not null)
+        {
+            <a class="btn btn-link px-1" asp-action="Index" asp-route-status="@Model.Status">Clear</a>
+        }
+    </div>
+</form>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in AdminProductsViewModel.StatusTabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(tab == Model.Status ? "active" : "")" asp-action="Index" asp-route-status="@tab"
+               asp-route-categoryId="@Model.CategoryId" asp-route-q="@Model.Q" asp-route-sort="@Model.Sort">@(tab == "Pending" ? "Review queue" : tab ?? "All")</a>
+        </li>
+    }
+</ul>
+
+@if (products.Items.Count == 0)
+{
+    <div class="alert alert-info">@(Model.Status == "Pending" ? "Nothing waiting for review." : "No products found.")</div>
+}
+else
+{
+    <p class="small text-muted">@products.TotalCount product(s)</p>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Proposed by</th>
+                    <th>Added (UTC)</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in products.Items)
+                {
+                    var isPublished = product.Status == "Approved" && product.IsActive;
+                    <tr>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@product.Id" class="fw-semibold text-decoration-none">@product.Name</a>
+                            <div class="small text-muted">@product.BrandName &middot; <span class="font-monospace">@product.ModelNumber</span></div>
+                        </td>
+                        <td class="small">@product.CategoryName</td>
+                        <td>
+                            <partial name="_ProductStatusBadge" model="product.Status" />
+                            @if (!product.IsActive)
+                            {
+                                <span class="badge text-bg-dark">hidden</span>
+                            }
+                            @if (product.Status == "Rejected" && !string.IsNullOrEmpty(product.ReviewNote))
+                            {
+                                <div class="small text-muted mt-1">@product.ReviewNote</div>
+                            }
+                        </td>
+                        <td class="small">@(product.ProposedByStoreName ?? "Admin")</td>
+                        <td class="small text-nowrap">@product.CreatedAt.ToDisplayDate()</td>
+                        <td class="text-end text-nowrap">
+                            @if (product.Status == "Pending")
+                            {
+                                <form asp-action="Approve" asp-route-id="@product.Id" method="post" class="d-inline">
+                                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectProductModal"
+                                        data-action="@Url.Action("Reject", new { id = product.Id })" data-title="Reject @product.Name">Reject</button>
+                            }
+                            @if (isPublished)
+                            {
+                                <a class="btn btn-sm btn-outline-secondary" asp-controller="Products" asp-action="Details" asp-route-slug="@product.Slug">View</a>
+                            }
+                            @if (product.Status == "Approved")
+                            {
+                                <form asp-action="@(product.IsActive ? "Deactivate" : "Activate")" asp-route-id="@product.Id" method="post" class="d-inline"
+                                      data-confirm="@(product.IsActive ? $"Hide {product.Name} from the catalog? Offers stay but customers cannot see or buy it." : null)">
+                                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                    <button type="submit" class="btn btn-sm @(product.IsActive ? "btn-outline-warning" : "btn-outline-success")">@(product.IsActive ? "Hide" : "Show")</button>
+                                </form>
+                            }
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@product.Id">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_Pager" model="@PagerViewModel.Create(products.Page, products.TotalPages, "Index", new { status = Model.Status, categoryId = Model.CategoryId, q = Model.Q, sort = Model.Sort })" />
+}
+
+<partial name="_RejectProductModal" />

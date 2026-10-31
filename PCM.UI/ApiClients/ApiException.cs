@@ -29,4 +29,7 @@ public sealed class ApiException(HttpStatusCode statusCode, ApiProblem? problem)
 
     /// <summary>Best message to show a user.</summary>
     public string UserMessage => Problem?.Detail ?? Problem?.Title ?? "Something went wrong. Please try again.";
+
+    /// <summary>First field error of a 400 if there is one, else <see cref="UserMessage"/>. For flash messages.</summary>
+    public string FirstMessage => Problem?.Errors?.Values.SelectMany(m => m).FirstOrDefault() ?? UserMessage;
 }

@@ -27,3 +27,15 @@ public sealed class StoreViewModel
     [Display(Name = "Contact phone"), RegularExpression(CommonRules.PhonePattern, ErrorMessage = "Phone must be 7 to 15 digits, optionally starting with +.")]
     public string? ContactPhone { get; set; }
 }
+
+/// <summary>The seller's product proposals: status tabs, sort and paging.</summary>
+public sealed class SellerProposalsViewModel
+{
+    public static readonly string?[] StatusTabs = [null, "Pending", "Approved", "Rejected"];
+
+    public PagedResponse<PCM.Infrastructure.DTO.Catalog.ProductManageListItemDto> Proposals { get; init; } = new([], 1, 20, 0, 0);
+
+    public string? Status { get; init; }
+
+    public string? Sort { get; init; }
+}

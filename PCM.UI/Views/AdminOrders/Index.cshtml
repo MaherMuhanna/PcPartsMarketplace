@@ -1,0 +1,92 @@
+@model AdminOrdersViewModel
+@{
+    ViewData["Title"] = "Orders";
+    var orders = Model.Orders;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Orders</h1>
+    <span class="text-muted small">@orders.TotalCount order(s)</span>
+</div>
+
+<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3" role="search">
+    <input type="hidden" name="status" value="@Model.Status" />
+    <div class="col-sm-5 col-lg-4">
+        <label for="q" class="form-label small mb-1">Order number</label>
+        <input type="search" id="q" name="q" value="@Model.Q" class="form-control" placeholder="e.g. PCM-000012 or 12" maxlength="20" />
+    </div>
+    <div class="col-sm-4 col-lg-3">
+        <label for="sort" class="form-label small mb-1">Sort</label>
+        <select id="sort" name="sort" class="form-select">
+            <option value="" selected="@(Model.Sort is null)">Newest first</option>
+            <option value="oldest" selected="@(Model.Sort == "oldest")">Oldest first</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Search</button>
+        @if (Model.Q is not null || Model.Sort is not null)
+        {
+            <a class="btn btn-link" asp-action="Index" asp-route-status="@Model.Status">Clear</a>
+        }
+    </div>
+</form>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in AdminOrdersViewModel.StatusTabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(tab == Model.Status ? "active" : "")" asp-action="Index" asp-route-status="@tab" asp-route-q="@Model.Q" asp-route-sort="@Model.Sort">@(tab ?? "All")</a>
+        </li>
+    }
+</ul>
+@if (Model.Status is not null)
+{
+    <p class="small text-muted">Orders with at least one shipment that is <strong>@Model.Status</strong>.</p>
+}
+
+@if (orders.Items.Count == 0)
+{
+    <div class="alert alert-info">No orders found.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Placed (UTC)</th>
+                    <th class="text-end">Items</th>
+                    <th class="text-end">Total</th>
+                    <th>Shipments</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders.Items)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@order.Id" class="fw-semibold font-monospace">@order.OrderNumber</a></td>
+                        <td>
+                            <div>@order.Customer?.FullName</div>
+                            <div class="small text-muted">@order.Customer?.Email</div>
+                        </td>
+                        <td class="small text-nowrap">@order.CreatedAt.ToDisplayDate()</td>
+                        <td class="text-end">@order.ItemCount</td>
+                        <td class="text-end text-nowrap">@order.Total.ToPrice()</td>
+                        <td>
+                            @foreach (var part in order.SellerOrders)
+                            {
+                                <span class="d-inline-block me-2 small">
+                                    @part.StoreName <span class="badge @part.Status.OrderStatusBadge()">@part.Status</span>
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_Pager" model="@PagerViewModel.Create(orders.Page, orders.TotalPages, "Index", new { status = Model.Status, q = Model.Q, sort = Model.Sort })" />
+}
