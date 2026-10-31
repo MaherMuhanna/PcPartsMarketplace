@@ -8,7 +8,7 @@ using PCM.Infrastructure.Services;
 
 namespace PCM.API.Controllers;
 
-/// <summary>Every order, for admins. The UI for these endpoints comes in Phase 6 (use Scalar for now).</summary>
+/// <summary>Every order, for admins (MVC pages: Admin > Orders).</summary>
 [ApiController]
 [Route("api/v1/admin/orders")]
 [Authorize(Policy = Policies.AdminOnly)]

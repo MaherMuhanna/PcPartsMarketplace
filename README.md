@@ -2,7 +2,7 @@
 
 Multi-vendor marketplace for computer parts (RAM, GPUs, CPUs, storage): an ASP.NET Core Web API plus an ASP.NET Core MVC frontend, on SQL Server with EF Core (Database-First), Repository + Unit of Work.
 
-> Status: **Phase 5 (Cart and checkout)** in progress. See the roadmap below.
+> Status: **Phase 6 (MVC UI)** in progress. See the roadmap below.
 
 ## Tech stack
 
@@ -64,6 +64,8 @@ Created on API startup when the environment is Development (`Seed:DemoUsers`). P
 | seller2@pcm.local | Seller | Store "Byte Corner", Pending (shows the review banner) |
 | seller3@pcm.local | Seller | Store "Circuit Store", Approved; 12 offers on the same products as Tech Hub at different prices |
 | customer@pcm.local | Customer | One default address, 5 demo orders (Pending split between two sellers, Confirmed, Shipped, Delivered, Cancelled) and 2 items in the cart |
+
+In Development the login page also shows a **Demo accounts** box: one click fills the email and password of each role. It appears only when `Seed:DemoUsers` is set and the environment is Development (Docker runs Development, so reviewers get it).
 
 The demo proposals and offers need the catalog from `seed.sql`; if the API started before you ran it, restart the API. Seeding is idempotent: a seller who already has offers is skipped, and demo orders are skipped once the customer has any order. Demo orders go through the real cart, checkout and status services, so their stock reservations and movements are real.
 
@@ -184,7 +186,22 @@ One cart per customer; lines reference offers (not products) and always show the
 - **Snapshots**: order lines keep the product name, condition and price at checkout, and the order keeps a copy of the shipping address and recipient name. Editing or deleting an address later never changes where an existing order ships.
 - **Auto-cancel of unconfirmed orders**: with cash on delivery an unconfirmed order only blocks stock, so a hosted `BackgroundService` cancels sub-orders still Pending after 3 days (`Orders:AutoCancel`), with the reason `System: Not confirmed within 3 days`, and releases their stock. A seller confirming at the same moment wins through the RowVersion check. Note for local demos: the demo Pending orders are cancelled 3 days after seeding.
 - **Suspended sellers** cannot sell (offers hidden, offer endpoints 403) but still finish the sub-orders they accepted (`SellerCanFulfil` policy).
-- The MVC UI has "Add to cart" on product pages, the cart, checkout, "My orders" with cancel, and "Orders" for sellers (status tabs and next-step buttons). Admin order pages come in Phase 6 (use Scalar).
+- The MVC UI has "Add to cart" on product pages, the cart, checkout, "My orders" with cancel, and "Orders" for sellers (status tabs and next-step buttons).
+
+## MVC UI (Phase 6)
+
+Every API feature now has a page; nobody needs Scalar to use the marketplace. The navbar has an **Admin** and a **Seller** dropdown, the current page is highlighted, and all flash messages use one toast style.
+
+| Who | Pages |
+| --- | --- |
+| Admin | Dashboard (`/admin`), Orders (search by number, status tabs, move or cancel any shipment with a reason), Sellers, Products with the review queue (approve, reject with a note, hide/show), Categories and specs (tree, attributes, Enum options), Brands |
+| Seller | Dashboard (`/seller`; non-approved sellers see their store status instead), Orders, My offers, Product proposals (propose, fix a rejected one, add an offer once approved), My store |
+| Customer | Catalog, product page, cart, checkout, My orders, My addresses |
+
+- **Dashboards** come from two read-only endpoints, `GET /api/v1/admin/dashboard` and `GET /api/v1/seller/dashboard`. Orders are counted per shipment (sub-order), because one order can be in several states. Sales count **Delivered** shipments only (cash on delivery: money is collected on delivery), by delivery date, over the last 30 days. The seller's low-stock count uses the same rule as the low-stock list.
+- **One product form** (`_ProductForm`) serves admins and sellers. Choosing a category loads that category's spec inputs (server-rendered partial, a few lines of `fetch`); changing the category of an existing product asks first, because specs are saved as a complete set. Empty optional specs and empty image rows are not sent, and the API's field errors (`specs[1].optionId`) are mapped back to the right input.
+- **Images** are up to 8 URL rows with a live preview that follows the API's URL rule (blocks `//host` and `javascript:`).
+- `tests/PCM.UI.Tests` covers the token handler (refresh before expiry, after a 401, sign-out on failure), the canonical catalog URL, the product form request and error mapping, and the pager.
 
 ## Design decisions (so far)
 
@@ -204,6 +221,6 @@ One cart per customer; lines reference offers (not products) and always show the
 2. ~~Auth: Identity, JWT + refresh tokens, roles, seller approval~~ ✔
 3. ~~Catalog: categories, specs, products, search and filters, seed data~~ ✔
 4. ~~Offers and inventory: seller offers, stock movements, low stock~~ ✔
-5. Cart and transactional checkout (in progress)
-6. MVC UI
+5. ~~Cart and transactional checkout~~ ✔
+6. MVC UI (in progress)
 7. Polish: tests, caching, diagrams, screenshots

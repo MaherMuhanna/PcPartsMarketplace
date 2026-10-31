@@ -83,6 +83,17 @@ public sealed partial class ProductFormBuilder(ICatalogApiClient catalogApi, IAd
         }
     }
 
+    /// <summary>
+    /// Call first in every POST: posted spec rows carry only the attribute id and a value, so this
+    /// reattaches each attribute's type (needed to pick the value to send) from the API, in render order.
+    /// Values of attributes that are not in the category are dropped.
+    /// </summary>
+    public async Task BindSpecsAsync(ProductFormViewModel model, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        model.Specs = await GetSpecFieldsAsync(model.CategoryId, model.Specs, cancellationToken);
+    }
+
     /// <summary>Spec fields of a leaf category (empty for 0 or a non-leaf, which has no attributes).</summary>
     public async Task<List<SpecFieldViewModel>> GetSpecFieldsAsync(int categoryId, IEnumerable<SpecFieldViewModel>? values, CancellationToken cancellationToken)
     {

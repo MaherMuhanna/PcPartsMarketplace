@@ -37,6 +37,7 @@ public sealed class SellerProposalsController(ISellerProposalsApiClient proposal
     public async Task<IActionResult> Create(ProductFormViewModel model, CancellationToken cancellationToken)
     {
         model.Id = null;
+        await formBuilder.BindSpecsAsync(model, cancellationToken);
         if (ModelState.IsValid)
         {
             var built = ProductFormBuilder.ToRequest(model);
@@ -74,6 +75,7 @@ public sealed class SellerProposalsController(ISellerProposalsApiClient proposal
     public async Task<IActionResult> Edit(int id, ProductFormViewModel model, CancellationToken cancellationToken)
     {
         model.Id = id;
+        await formBuilder.BindSpecsAsync(model, cancellationToken);
         if (ModelState.IsValid)
         {
             var built = ProductFormBuilder.ToRequest(model);
