@@ -37,6 +37,9 @@ public interface IUnitOfWork
 
     ISellerOrderRepository SellerOrders { get; }
 
+    /// <summary>Read-only counts for the admin and seller dashboards.</summary>
+    IDashboardRepository Dashboards { get; }
+
     /// <summary>Persists all staged changes in one round trip; returns rows affected.</summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

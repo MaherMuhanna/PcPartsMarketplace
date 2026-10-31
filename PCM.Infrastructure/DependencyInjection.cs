@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<ISellerOrderService, SellerOrderService>();
         services.AddScoped<IAdminOrderService, AdminOrderService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<SellerOrderStatusChanger>();
         services.AddScoped<PendingOrderExpiry>();
         services.AddScoped<CustomerDirectory>();

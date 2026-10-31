@@ -32,6 +32,7 @@ public sealed class UnitOfWork(PcPartsContext context, AuthDbContext authContext
     private ICartRepository? _carts;
     private IOrderRepository? _orders;
     private ISellerOrderRepository? _sellerOrders;
+    private IDashboardRepository? _dashboards;
 
     public IBrandRepository Brands => _brands ??= new BrandRepository(context);
 
@@ -58,6 +59,8 @@ public sealed class UnitOfWork(PcPartsContext context, AuthDbContext authContext
     public IOrderRepository Orders => _orders ??= new OrderRepository(context);
 
     public ISellerOrderRepository SellerOrders => _sellerOrders ??= new SellerOrderRepository(context);
+
+    public IDashboardRepository Dashboards => _dashboards ??= new DashboardRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
