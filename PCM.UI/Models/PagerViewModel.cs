@@ -31,7 +31,7 @@ public sealed record PagerViewModel(int Page, int TotalPages, string Action, IDi
     public IDictionary<string, string> For(int page) =>
         new Dictionary<string, string>(RouteValues, StringComparer.OrdinalIgnoreCase) { ["page"] = page.ToString(System.Globalization.CultureInfo.InvariantCulture) };
 
-    /// <summary>Page numbers to show; 0 means a gap ("...").</summary>
+    /// <summary>Page numbers to show: first, last and <see cref="Window"/> around the current one; 0 means a gap ("...").</summary>
     public IEnumerable<int> Pages()
     {
         var previous = 0;
@@ -39,7 +39,12 @@ public sealed record PagerViewModel(int Page, int TotalPages, string Action, IDi
         {
             if (p == 1 || p == TotalPages || Math.Abs(p - Page) <= Window)
             {
-                if (previous != 0 && p - previous > 1)
+                // A gap of one page shows that page: "..." must save space.
+                if (previous != 0 && p - previous == 2)
+                {
+                    yield return previous + 1;
+                }
+                else if (previous != 0 && p - previous > 2)
                 {
                     yield return 0;
                 }
