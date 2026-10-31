@@ -22,6 +22,18 @@ public interface IOfferRepository : IRepository<Offer>
 
     /// <summary>True if the seller already has a (non-deleted) offer for the product in this condition.</summary>
     Task<bool> ExistsForSellerAsync(int sellerId, int productId, string condition, CancellationToken cancellationToken = default);
+
+    /// <summary>Id of the seller's (non-deleted) offer for the product in this condition, or null (demo seeding).</summary>
+    Task<int?> FindIdAsync(int sellerId, int productId, string condition, CancellationToken cancellationToken = default);
+
+    /// <summary>What a customer adding the offer to a cart needs to know; null if it does not exist or is deleted.</summary>
+    Task<OfferPurchaseRow?> GetPurchaseRowAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tracked offers with Product and Seller, soft-deleted ones included (checkout must report them as
+    /// unavailable, and a cancelled order must still release stock). Used by checkout and status changes.
+    /// </summary>
+    Task<List<Offer>> GetForUpdateAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Inventory audit trail (append-only: rows are added through the offer, never changed).</summary>

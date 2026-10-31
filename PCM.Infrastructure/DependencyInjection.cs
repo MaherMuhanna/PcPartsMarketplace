@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PCM.DomainEntities.Context;
 using PCM.DomainEntities.Identity;
 using PCM.Infrastructure.Catalog;
+using PCM.Infrastructure.Orders;
 using PCM.Infrastructure.Seeding;
 using PCM.Infrastructure.Services;
 
@@ -53,6 +54,13 @@ public static class DependencyInjection
         services.AddScoped<ISellerProposalService, SellerProposalService>();
         services.AddScoped<ISellerOfferService, SellerOfferService>();
         services.AddScoped<ProductEditor>();
+        services.AddScoped<ICartService, CartService>();
+        services.AddScoped<ICheckoutService, CheckoutService>();
+        services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+        services.AddScoped<ISellerOrderService, SellerOrderService>();
+        services.AddScoped<IAdminOrderService, AdminOrderService>();
+        services.AddScoped<SellerOrderStatusChanger>();
+        services.AddScoped<CustomerDirectory>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAddressService, AddressService>();
         services.AddScoped<ISellerAdminService, SellerAdminService>();
@@ -60,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<DemoUserSeeder>();
         services.AddScoped<DemoCatalogSeeder>();
         services.AddScoped<DemoOfferSeeder>();
+        services.AddScoped<DemoOrderSeeder>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly, ServiceLifetime.Singleton);
 

@@ -12,6 +12,7 @@ public class OfferRepository(PcPartsContext context) : Repository<Offer>(context
 {
     // Compile-time constant, so EF inlines it as a SQL literal.
     private const string Approved = nameof(ProductStatus.Approved);
+    private const string ApprovedSeller = nameof(SellerStatus.Approved);
 
     public async Task<PagedResult<SellerOfferRow>> GetSellerPagedAsync(
         int sellerId, SellerOfferFilter filter, int page, int pageSize, SellerOfferSort sort, CancellationToken cancellationToken = default)
@@ -48,6 +49,38 @@ public class OfferRepository(PcPartsContext context) : Repository<Offer>(context
 
     public Task<bool> ExistsForSellerAsync(int sellerId, int productId, string condition, CancellationToken cancellationToken = default) =>
         DbSet.AnyAsync(o => o.SellerId == sellerId && o.ProductId == productId && o.Condition == condition, cancellationToken);
+
+    public Task<int?> FindIdAsync(int sellerId, int productId, string condition, CancellationToken cancellationToken = default) =>
+        DbSet.AsNoTracking()
+            .Where(o => o.SellerId == sellerId && o.ProductId == productId && o.Condition == condition)
+            .Select(o => (int?)o.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public Task<OfferPurchaseRow?> GetPurchaseRowAsync(int id, CancellationToken cancellationToken = default) =>
+        // The soft-delete filter applies to the offer, its seller and its product (all inner joins),
+        // so a deleted one of the three gives null: "not available".
+        DbSet.AsNoTracking()
+            .Where(o => o.Id == id)
+            .Select(o => new OfferPurchaseRow(
+                o.Id,
+                o.SellerId,
+                o.Price,
+                o.Stock,
+                o.ReservedStock,
+                o.Seller.Status == ApprovedSeller && o.Product.Status == Approved && o.Product.IsActive))
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public Task<List<Offer>> GetForUpdateAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        return DbSet
+            .IgnoreQueryFilters([PcPartsContext.SoftDeleteFilter])
+            .Where(o => ids.Contains(o.Id))
+            .Include(o => o.Product)
+            .Include(o => o.Seller)
+            .OrderBy(o => o.Id)
+            .ToListAsync(cancellationToken);
+    }
 
     // ---------------------------------------------------------------------
 

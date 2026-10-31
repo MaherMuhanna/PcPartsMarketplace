@@ -36,6 +36,28 @@ public sealed class GlobalExceptionHandler(
             });
         }
 
+        // Checkout found changed lines: 409 with the lines, so the client can show what changed.
+        if (exception is CheckoutConflictException checkout)
+        {
+            logger.LogInformation("Checkout failed with 409: {Count} changed line(s)", checkout.Items.Count);
+            httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+
+            var problem = new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Checkout conflict",
+                Detail = checkout.Message
+            };
+            problem.Extensions["items"] = checkout.Items;
+
+            return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                Exception = exception,
+                ProblemDetails = problem
+            });
+        }
+
         var (status, title, detail) = exception switch
         {
             UnauthorizedException e => (StatusCodes.Status401Unauthorized, "Unauthorized", e.Message),
@@ -46,6 +68,9 @@ public sealed class GlobalExceptionHandler(
             // A unique index caught a duplicate that slipped past the service pre-check (race).
             DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } } => (StatusCodes.Status409Conflict, "Conflict",
                 "A record with the same unique value already exists."),
+            // Two checkouts locked the same offers in opposite order and SQL Server stopped one (after one retry).
+            DbUpdateException { InnerException: SqlException { Number: 1205 } } or SqlException { Number: 1205 } => (StatusCodes.Status409Conflict, "Conflict",
+                "The store is busy with the same items right now. Please try again."),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred", null)
         };
 
