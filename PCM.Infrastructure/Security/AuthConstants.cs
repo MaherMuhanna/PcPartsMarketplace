@@ -34,4 +34,10 @@ public static class Policies
 
     /// <summary>Seller whose profile is Approved right now (offers, inventory, orders from Phase 4).</summary>
     public const string ApprovedSeller = nameof(ApprovedSeller);
+
+    /// <summary>
+    /// Approved or Suspended seller: may read and move their existing sub-orders. Suspension stops new
+    /// sales (offers are hidden), not the duty to ship or cancel what customers already ordered.
+    /// </summary>
+    public const string SellerCanFulfil = nameof(SellerCanFulfil);
 }

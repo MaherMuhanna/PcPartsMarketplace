@@ -200,6 +200,13 @@ public partial class PcPartsContext : DbContext
             entity.Property(e => e.PaymentMethod)
                 .HasMaxLength(20)
                 .HasDefaultValue("COD", "DF_Order_PaymentMethod");
+            entity.Property(e => e.ShipCity).HasMaxLength(100);
+            entity.Property(e => e.ShipDetails).HasMaxLength(200);
+            entity.Property(e => e.ShipPhone)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.ShipRecipientName).HasMaxLength(100);
+            entity.Property(e => e.ShipStreet).HasMaxLength(200);
             entity.Property(e => e.Total).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.UpdatedAt).HasPrecision(3);
 
@@ -343,6 +350,8 @@ public partial class PcPartsContext : DbContext
             entity.ToTable("SellerOrder");
 
             entity.HasIndex(e => new { e.SellerId, e.Status }, "IX_SellerOrder_SellerId_Status");
+
+            entity.HasIndex(e => new { e.Status, e.CreatedAt }, "IX_SellerOrder_Status_CreatedAt");
 
             entity.HasIndex(e => new { e.OrderId, e.SellerId }, "UX_SellerOrder_OrderId_SellerId").IsUnique();
 

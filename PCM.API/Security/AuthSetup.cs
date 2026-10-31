@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using PCM.DomainEntities.Enums;
 using PCM.Infrastructure.Security;
 
 namespace PCM.API.Security;
@@ -57,8 +58,12 @@ public static class AuthSetup
             .AddPolicy(Policies.SellerAny, policy => policy.RequireRole(Roles.Seller))
             .AddPolicy(Policies.ApprovedSeller, policy => policy
                 .RequireRole(Roles.Seller)
-                .AddRequirements(new ApprovedSellerRequirement()));
-        builder.Services.AddScoped<IAuthorizationHandler, ApprovedSellerHandler>();
+                .AddRequirements(new SellerStatusRequirement(SellerStatus.Approved)))
+            // A suspended seller can no longer sell, but still has to finish the sub-orders they accepted.
+            .AddPolicy(Policies.SellerCanFulfil, policy => policy
+                .RequireRole(Roles.Seller)
+                .AddRequirements(new SellerStatusRequirement(SellerStatus.Approved, SellerStatus.Suspended)));
+        builder.Services.AddScoped<IAuthorizationHandler, SellerStatusHandler>();
 
         AddAuthRateLimiter(builder);
 

@@ -128,7 +128,7 @@ public sealed class SellerOrderService(
 
     private async Task<int> GetSellerIdAsync(int userId, CancellationToken cancellationToken)
     {
-        // The ApprovedSeller policy has already checked the profile; this only maps user -> seller id.
+        // The SellerCanFulfil policy has already checked the profile; this only maps user -> seller id.
         var profile = await unitOfWork.SellerProfiles.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException("Seller profile was not found.");
         return profile.Id;

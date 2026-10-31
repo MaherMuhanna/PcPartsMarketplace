@@ -13,6 +13,16 @@ public partial class Order
 
     public int ShippingAddressId { get; set; }
 
+    public string ShipRecipientName { get; set; } = null!;
+
+    public string ShipCity { get; set; } = null!;
+
+    public string ShipStreet { get; set; } = null!;
+
+    public string? ShipDetails { get; set; }
+
+    public string ShipPhone { get; set; } = null!;
+
     public decimal Total { get; set; }
 
     public string PaymentMethod { get; set; } = null!;

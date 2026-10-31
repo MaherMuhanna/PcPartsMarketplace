@@ -43,6 +43,9 @@ public sealed partial class ApiFactory : WebApplicationFactory<Program>, IAsyncL
 
         // Every test shares one client "IP"; lift the per-IP auth limit so tests do not hit 429.
         builder.UseSetting("RateLimiting:AuthPermitPerMinute", "100000");
+
+        // The auto-cancel job would race the tests; they call PendingOrderExpiry directly instead.
+        builder.UseSetting("Orders:AutoCancel:Enabled", "false");
     }
 
     public override async ValueTask DisposeAsync()

@@ -15,6 +15,8 @@ services:
       - "14333:1433"
     volumes:
       - sqldata:/var/opt/mssql
+    networks:
+      - pcm
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SELECT 1\" || exit 1"]
       interval: 5s
@@ -34,6 +36,8 @@ services:
       - ./Database:/scripts:ro
     entrypoint: ["/bin/bash", "-c", "/opt/mssql-tools18/bin/sqlcmd -S db -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -i /scripts/schema.sql && /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -i /scripts/seed.sql"]
     restart: "no"
+    networks:
+      - pcm
 
   api:
     build:
@@ -47,8 +51,12 @@ services:
       ConnectionStrings__PcParts: Server=db;Database=PcPartsMarketplace;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
       # Optional: without it the API generates a random key per start (Development only).
       Jwt__SigningKey: ${JWT_SIGNING_KEY:-}
+      # Trust X-Forwarded-For only from the UI container (fixed IP below), so the rate limit is per user.
+      ForwardedHeaders__KnownProxies__0: 172.28.0.20
     ports:
       - "8080:8080"
+    networks:
+      - pcm
 
   ui:
     build:
@@ -61,6 +69,15 @@ services:
       Api__BaseUrl: http://api:8080/
     ports:
       - "8081:8080"
+    networks:
+      pcm:
+        ipv4_address: 172.28.0.20   # fixed, so the API can trust it as the only proxy
+
+networks:
+  pcm:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
   sqldata:

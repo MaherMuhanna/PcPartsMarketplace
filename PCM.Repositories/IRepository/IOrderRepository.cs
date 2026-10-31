@@ -37,4 +37,13 @@ public interface ISellerOrderRepository : IRepository<SellerOrder>
 
     /// <summary>Tracked sub-order of the seller with its order and lines, or null.</summary>
     Task<SellerOrder?> GetOwnedForUpdateAsync(int sellerId, int id, CancellationToken cancellationToken = default);
+
+    /// <summary>Tracked sub-order (any seller) with its order and lines, or null. For system jobs only.</summary>
+    Task<SellerOrder?> GetForUpdateAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ids of Pending sub-orders created before <paramref name="createdBefore"/> (UTC), oldest first,
+    /// at most <paramref name="take"/>. Uses IX_SellerOrder_Status_CreatedAt.
+    /// </summary>
+    Task<IReadOnlyList<int>> GetPendingIdsCreatedBeforeAsync(DateTime createdBefore, int take, CancellationToken cancellationToken = default);
 }

@@ -111,7 +111,7 @@ Generated files are never edited by hand; custom code lives in partial classes (
 - **Rotation and reuse detection**: every refresh revokes the old token and links it to the new one (`ReplacedByTokenId`). If an already-rotated token is presented again, every token issued after it is revoked, so a stolen token is useless after the real owner refreshes. The rotation uses a conditional `UPDATE ... WHERE RevokedAt IS NULL` inside a transaction, so two concurrent refreshes with the same token cannot both succeed.
 - **Seller status state machine**: `Pending -> Approved | Rejected`, `Approved -> Suspended`, `Suspended -> Approved` (reinstate). Rejecting or suspending revokes the seller's refresh tokens. Sellers can sign in in any status; selling endpoints (Phase 4) use the `ApprovedSeller` policy, which checks the status in the database on every request instead of trusting the token claim.
 - **One transaction across Identity and domain tables**: `AuthDbContext` (Identity) and `PcPartsContext` share one connection per request, and the Unit of Work enlists both in its transaction (e.g. user + seller profile at registration).
-- **Rate limiting**: 10 requests per minute per IP on login, register and refresh (429 ProblemDetails).
+- **Rate limiting**: 10 requests per minute per client IP on login, register and refresh (429 ProblemDetails). Browser traffic reaches the API through the MVC UI, so the UI forwards the browser's IP in `X-Forwarded-For` and the API accepts that header only from trusted proxies (`ForwardedHeaders:KnownProxies`; loopback by default, the UI container's fixed IP in Docker). Without this, every user would share the UI server's limit.
 - **UI session**: the MVC app keeps both tokens inside its encrypted, HttpOnly auth cookie (never in browser storage). A `DelegatingHandler` adds the bearer token to every API call, refreshes it shortly before it expires (or after a 401), and signs the user out if the refresh fails.
 
 ## Catalog
@@ -173,15 +173,17 @@ One cart per customer; lines reference offers (not products) and always show the
 | `POST /api/v1/orders/checkout` | Customer | `{ addressId, items: [{ cartItemId, unitPrice, quantity }] }` as shown to the customer; 201 + order |
 | `GET /api/v1/orders`, `GET /api/v1/orders/{id}` | Customer | Own orders only (404 otherwise) |
 | `POST /api/v1/orders/{id}/cancel`, `POST /api/v1/orders/{id}/seller-orders/{sellerOrderId}/cancel` | Customer | Whole order or one seller's part; Pending or Confirmed only |
-| `GET /api/v1/seller/orders`, `GET /api/v1/seller/orders/{id}` | Approved seller | Own sub-orders; `status` filter |
-| `PATCH /api/v1/seller/orders/{id}/status` | Approved seller | `{ status, reason }`: Confirmed, Shipped, Delivered, or Cancelled with a reason |
+| `GET /api/v1/seller/orders`, `GET /api/v1/seller/orders/{id}` | Approved or suspended seller | Own sub-orders; `status` filter |
+| `PATCH /api/v1/seller/orders/{id}/status` | Approved or suspended seller | `{ status, reason }`: Confirmed, Shipped, Delivered, or Cancelled with a reason |
 | `GET /api/v1/admin/orders`, `GET /api/v1/admin/orders/{id}` | Admin | `status`, `q` (order number) |
 | `PATCH /api/v1/admin/orders/{id}/seller-orders/{sellerOrderId}/status` | Admin | Same moves as sellers |
 
 - **Transactional checkout**: one `IUnitOfWork` transaction locks the cart row (a double click waits, then finds the cart empty), re-reads every offer, compares price, quantity, availability and stock with what the customer saw, creates the order and sub-orders, reserves the stock (`Reserve` movements) and empties the cart. Any difference returns 409 with an `items` list of the changed lines (`PriceChanged`, `InsufficientStock`, `Unavailable`, `CartChanged`).
 - **Concurrency**: `Offer.RowVersion` and `SellerOrder.RowVersion` are concurrency tokens. A conflict (or a SQL Server deadlock at checkout) is retried once on fresh data, then 409.
 - **Sub-order flow**: `Pending -> Confirmed -> Shipped -> Delivered`; `Cancelled` only from Pending or Confirmed. Delivered sells the stock (Stock and ReservedStock drop); Cancelled releases it. Every change writes a `StockMovement` linked to the sub-order. The cancel reason records who cancelled (`Customer: ...`, `Seller: ...`, `Admin: ...`).
-- **Snapshots**: order lines keep the product name, condition and price at checkout.
+- **Snapshots**: order lines keep the product name, condition and price at checkout, and the order keeps a copy of the shipping address and recipient name. Editing or deleting an address later never changes where an existing order ships.
+- **Auto-cancel of unconfirmed orders**: with cash on delivery an unconfirmed order only blocks stock, so a hosted `BackgroundService` cancels sub-orders still Pending after 3 days (`Orders:AutoCancel`), with the reason `System: Not confirmed within 3 days`, and releases their stock. A seller confirming at the same moment wins through the RowVersion check. Note for local demos: the demo Pending orders are cancelled 3 days after seeding.
+- **Suspended sellers** cannot sell (offers hidden, offer endpoints 403) but still finish the sub-orders they accepted (`SellerCanFulfil` policy).
 - The MVC UI has "Add to cart" on product pages, the cart, checkout, "My orders" with cancel, and "Orders" for sellers (status tabs and next-step buttons). Admin order pages come in Phase 6 (use Scalar).
 
 ## Design decisions (so far)
@@ -192,6 +194,9 @@ One cart per customer; lines reference offers (not products) and always show the
 - **Repositories never save**: the Unit of Work commits once per business operation and exposes transactions without leaking EF Core types.
 - **Consistent errors**: every error is RFC 9457 ProblemDetails with `traceId` and `correlationId`; validation errors are 400 with field names.
 - **No secrets in the repo**: user-secrets locally, environment variables in Docker and CI.
+- **Docker runs in `Development` on purpose**: it is the reviewer setup and needs Scalar and the demo accounts. A real deployment uses `Production` with secrets from environment variables or a vault.
+- **Product images are URLs in V1** (http(s) or a site path). Upload to Azure Blob Storage is planned for V2.
+- **No status history table in V1**: each sub-order keeps a timestamp per step and the cancel reason records who cancelled. A full audit trail (who moved which status, when) is planned for V2.
 
 ## Roadmap
 

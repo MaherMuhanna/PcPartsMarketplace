@@ -66,8 +66,11 @@ public sealed record CheckoutIssueDto(
 // Orders
 // ---------------------------------------------------------------------
 
-/// <summary>Shipping address of an order (the address row as it is now; see decisions log, Batch 4).</summary>
-public sealed record ShippingAddressDto(int Id, string City, string Street, string? Details, string Phone);
+/// <summary>
+/// Shipping address of an order, exactly as it was at checkout (snapshot on the order row).
+/// Id is the address-book entry it was copied from; later edits to that entry do not change this.
+/// </summary>
+public sealed record ShippingAddressDto(int Id, string RecipientName, string City, string Street, string? Details, string Phone);
 
 /// <summary>The customer of an order. Only in seller and admin views.</summary>
 public sealed record OrderCustomerDto(int Id, string FullName, string? Email);

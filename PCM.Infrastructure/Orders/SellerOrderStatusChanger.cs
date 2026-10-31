@@ -29,14 +29,14 @@ public sealed class SellerOrderStatusChanger(
     /// <param name="to">Target status.</param>
     /// <param name="actor">Who makes the move.</param>
     /// <param name="reason">Cancel reason, if any.</param>
-    /// <param name="userId">Current user, recorded on the stock movements.</param>
+    /// <param name="userId">Current user, recorded on the stock movements; null for <see cref="OrderActor.System"/>.</param>
     /// <param name="cancellationToken">Request cancellation.</param>
     public async Task ChangeAsync(
         Func<CancellationToken, Task<IReadOnlyList<SellerOrder>>> load,
         SellerOrderStatus to,
         OrderActor actor,
         string? reason,
-        int userId,
+        int? userId,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(load);

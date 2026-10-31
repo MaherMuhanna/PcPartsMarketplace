@@ -2,13 +2,19 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PCM.API.IntegrationTests.Infrastructure;
+using PCM.DomainEntities.Context;
 using PCM.Infrastructure.DTO.Addresses;
+using PCM.Infrastructure.DTO.Auth;
 using PCM.Infrastructure.DTO.Carts;
 using PCM.Infrastructure.DTO.Catalog;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.DTO.Offers;
 using PCM.Infrastructure.DTO.Orders;
+using PCM.Infrastructure.DTO.Sellers;
+using PCM.Infrastructure.Orders;
 
 namespace PCM.API.IntegrationTests;
 
@@ -265,6 +271,98 @@ public sealed class CheckoutAndOrdersEndpointTests(ApiFactory factory)
         Assert.Equal(HttpStatusCode.NoContent, (await m.Customer.DeleteAsync($"/api/v1/cart/items/{line.Id}", Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await m.Customer.DeleteAsync("/api/v1/cart", Ct)).StatusCode);
         Assert.Equal(0, (await m.Customer.GetFromJsonAsync<CartSummaryDto>("/api/v1/cart/summary", Ct))!.ItemCount);
+    }
+
+    [Fact]
+    public async Task Order_keeps_the_shipping_address_snapshot_after_the_address_changes()
+    {
+        var m = await ArrangeAsync();
+        var cart = await AddAsync(m.Customer, m.A1.Id, 1);
+        var order = await TestCatalog.PostAsync<OrderDto>(m.Customer, "/api/v1/orders/checkout", AsSeen(cart, m.Address.Id));
+        var me = (await m.Customer.GetFromJsonAsync<UserDto>("/api/v1/auth/me", Ct))!;
+
+        // The customer edits the address, then deletes it.
+        Assert.Equal(HttpStatusCode.OK, (await m.Customer.PutAsJsonAsync($"/api/v1/account/addresses/{m.Address.Id}", new UpdateAddressRequest
+        {
+            City = "Aqaba",
+            Street = "Changed Street 9",
+            Details = "Changed",
+            Phone = "+962799999999"
+        }, Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await m.Customer.DeleteAsync($"/api/v1/account/addresses/{m.Address.Id}", Ct)).StatusCode);
+
+        // Customer and seller still see the address exactly as it was at checkout.
+        var expected = new ShippingAddressDto(m.Address.Id, me.FullName, "Amman", "Test Street 1", null, "+962790000001");
+        var customerView = (await m.Customer.GetFromJsonAsync<OrderDto>($"/api/v1/orders/{order.Id}", Ct))!;
+        Assert.Equal(expected, customerView.ShippingAddress);
+
+        var sellerView = (await m.SellerA.GetFromJsonAsync<SellerOrderDetailsDto>(
+            $"/api/v1/seller/orders/{Assert.Single(order.SellerOrders).Id}", Ct))!;
+        Assert.Equal(expected, sellerView.ShippingAddress);
+    }
+
+    [Fact]
+    public async Task Suspended_seller_cannot_sell_but_still_finishes_accepted_orders()
+    {
+        var m = await ArrangeAsync();
+        var cart = await AddAsync(m.Customer, m.A1.Id, 1);
+        var order = await TestCatalog.PostAsync<OrderDto>(m.Customer, "/api/v1/orders/checkout", AsSeen(cart, m.Address.Id));
+        var sub = Assert.Single(order.SellerOrders);
+
+        var suspend = await m.Admin.PostAsJsonAsync($"/api/v1/admin/sellers/{sub.SellerId}/suspend",
+            new SellerStatusReasonRequest { Reason = "Late shipments" }, Ct);
+        Assert.Equal(HttpStatusCode.OK, suspend.StatusCode);
+
+        // The access token is still valid; the policy reads the status from the database.
+        Assert.Equal(HttpStatusCode.Forbidden, (await m.SellerA.GetAsync("/api/v1/seller/offers", Ct)).StatusCode);
+
+        // Existing sub-orders stay reachable and can move forward to delivery.
+        Assert.Equal(HttpStatusCode.OK, (await m.SellerA.GetAsync($"/api/v1/seller/orders/{sub.Id}", Ct)).StatusCode);
+        await MoveAsync(m.SellerA, sub.Id, "Confirmed");
+        await MoveAsync(m.SellerA, sub.Id, "Shipped");
+        var delivered = await MoveAsync(m.SellerA, sub.Id, "Delivered");
+        Assert.Equal("Delivered", delivered.Status);
+    }
+
+    [Fact]
+    public async Task Unconfirmed_sub_orders_are_cancelled_after_the_expiry_and_release_stock()
+    {
+        var m = await ArrangeAsync();
+
+        // One order with two parts: seller A's part stays Pending, seller B confirms theirs.
+        await AddAsync(m.Customer, m.A1.Id, 2);
+        var cart = await AddAsync(m.Customer, m.B1.Id, 1);
+        var order = await TestCatalog.PostAsync<OrderDto>(m.Customer, "/api/v1/orders/checkout", AsSeen(cart, m.Address.Id));
+        var partA = order.SellerOrders.Single(s => s.Items.Any(i => i.OfferId == m.A1.Id));
+        var partB = order.SellerOrders.Single(s => s.Items.Any(i => i.OfferId == m.B1.Id));
+        await MoveAsync(m.SellerB, partB.Id, "Confirmed");
+
+        // A second, fresh order of seller A stays untouched (younger than the expiry).
+        var fresh = await TestCatalog.PostAsync<OrderDto>(m.Customer, "/api/v1/orders/checkout",
+            AsSeen(await AddAsync(m.Customer, m.A2.Id, 1), m.Address.Id));
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<PcPartsContext>();
+        var oldDate = DateTime.UtcNow.AddDays(-4);
+        await db.SellerOrders.Where(s => s.OrderId == order.Id)
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.CreatedAt, oldDate), Ct);
+
+        var cancelled = await scope.ServiceProvider.GetRequiredService<PendingOrderExpiry>().CancelExpiredAsync(3, 1000, Ct);
+        Assert.Equal(1, cancelled);
+
+        var after = (await m.Customer.GetFromJsonAsync<OrderDto>($"/api/v1/orders/{order.Id}", Ct))!;
+        var cancelledPart = after.SellerOrders.Single(s => s.Id == partA.Id);
+        Assert.Equal(("Cancelled", "System: Not confirmed within 3 days"), (cancelledPart.Status, cancelledPart.CancelReason));
+        Assert.Equal("Confirmed", after.SellerOrders.Single(s => s.Id == partB.Id).Status);
+        Assert.Equal("Pending", (await m.Customer.GetFromJsonAsync<OrderDto>($"/api/v1/orders/{fresh.Id}", Ct))!.SellerOrders.Single().Status);
+
+        // Seller A's 2 units are available again; the fresh order still holds its unit of A2.
+        var a1 = await GetOfferAsync(m.SellerA, m.A1.Id);
+        Assert.Equal((5, 0), (a1.Stock, a1.ReservedStock));
+        Assert.Equal(1, (await GetOfferAsync(m.SellerA, m.A2.Id)).ReservedStock);
+
+        // Running again finds nothing new.
+        Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<PendingOrderExpiry>().CancelExpiredAsync(3, 1000, Ct));
     }
 
     [Fact]

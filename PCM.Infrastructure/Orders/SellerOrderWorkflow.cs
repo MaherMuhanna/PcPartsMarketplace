@@ -25,7 +25,7 @@ public static class SellerOrderWorkflow
     /// <param name="to">Target status.</param>
     /// <param name="actor">Who makes the move (customers may only cancel).</param>
     /// <param name="reason">Cancel reason (required from sellers and admins; validated by the request validator).</param>
-    /// <param name="userId">Current user, recorded on the stock movements.</param>
+    /// <param name="userId">Current user, recorded on the stock movements; null for <see cref="OrderActor.System"/>.</param>
     /// <param name="now">UTC time of the move.</param>
     /// <exception cref="ConflictException">The move is not allowed from the current status.</exception>
     public static void Apply(
@@ -34,7 +34,7 @@ public static class SellerOrderWorkflow
         SellerOrderStatus to,
         OrderActor actor,
         string? reason,
-        int userId,
+        int? userId,
         DateTime now)
     {
         ArgumentNullException.ThrowIfNull(sellerOrder);

@@ -98,7 +98,7 @@ public static class OfferStock
 
     /// <summary>Sub-order cancelled: gives the reserved units back to "available" (ReservedStock goes down).</summary>
     /// <exception cref="InvalidOperationException">Less is reserved than the sub-order holds (data is inconsistent).</exception>
-    public static StockMovement Release(Offer offer, SellerOrder sellerOrder, int quantity, int userId, string? note)
+    public static StockMovement Release(Offer offer, SellerOrder sellerOrder, int quantity, int? userId, string? note)
     {
         ArgumentNullException.ThrowIfNull(offer);
         EnsurePositive(quantity);
@@ -113,7 +113,7 @@ public static class OfferStock
     /// ReservedStock both drop by <paramref name="quantity"/> (business rule 5). Available is unchanged.
     /// </summary>
     /// <exception cref="InvalidOperationException">Less is reserved than the sub-order holds (data is inconsistent).</exception>
-    public static StockMovement Sell(Offer offer, SellerOrder sellerOrder, int quantity, int userId)
+    public static StockMovement Sell(Offer offer, SellerOrder sellerOrder, int quantity, int? userId)
     {
         ArgumentNullException.ThrowIfNull(offer);
         EnsurePositive(quantity);
@@ -126,8 +126,9 @@ public static class OfferStock
 
     // ---------------------------------------------------------------------
 
+    /// <remarks><paramref name="userId"/> is null when the system makes the change (auto-cancel job).</remarks>
     private static StockMovement Record(
-        Offer offer, StockMovementReason reason, int change, int userId, string? note, SellerOrder? sellerOrder)
+        Offer offer, StockMovementReason reason, int change, int? userId, string? note, SellerOrder? sellerOrder)
     {
         var movement = new StockMovement
         {

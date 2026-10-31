@@ -9,12 +9,12 @@ using PCM.Infrastructure.Services;
 namespace PCM.API.Controllers;
 
 /// <summary>
-/// The signed-in seller's sub-orders (their part of each customer order). Approved sellers only;
-/// other sellers' sub-orders return 404.
+/// The signed-in seller's sub-orders (their part of each customer order). Approved and Suspended sellers
+/// (a suspended seller still finishes accepted orders); other sellers' sub-orders return 404.
 /// </summary>
 [ApiController]
 [Route("api/v1/seller/orders")]
-[Authorize(Policy = Policies.ApprovedSeller)]
+[Authorize(Policy = Policies.SellerCanFulfil)]
 public sealed class SellerOrdersController(ISellerOrderService orderService) : ControllerBase
 {
     [HttpGet]
