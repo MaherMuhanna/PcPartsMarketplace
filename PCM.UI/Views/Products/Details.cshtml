@@ -7,6 +7,11 @@
 
     // Approved sellers get a shortcut to offer this product (the API re-checks approval).
     var canSell = User.IsInRole(Roles.Seller) && User.FindFirstValue(AppClaimTypes.SellerStatus) == "Approved";
+
+    // Customers buy from an offer; visitors are asked to sign in first. Sellers and admins cannot buy.
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var canBuy = User.IsInRole(Roles.Customer);
+    var productUrl = Context.Request.Path + Context.Request.QueryString;
 }
 
 <nav aria-label="breadcrumb">
@@ -101,7 +106,7 @@
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead>
-                        <tr><th>Seller</th><th>Condition</th><th>Availability</th><th class="text-end">Price</th></tr>
+                        <tr><th>Seller</th><th>Condition</th><th>Availability</th><th class="text-end">Price</th><th class="text-end"><span class="visually-hidden">Buy</span></th></tr>
                     </thead>
                     <tbody>
                         @* Already sorted by the API: cheapest first. *@
@@ -112,6 +117,23 @@
                                 <td><span class="badge @(offer.Condition == "New" ? "text-bg-primary" : "text-bg-secondary")">@offer.Condition</span></td>
                                 <td class="small">@(offer.Available > 0 ? $"{offer.Available} available" : "Out of stock")</td>
                                 <td class="text-end fw-semibold">@offer.Price.ToPrice()</td>
+                                <td class="text-end text-nowrap">
+                                    @if (offer.Available > 0 && canBuy)
+                                    {
+                                        <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline-flex gap-1">
+                                            <input type="hidden" name="offerId" value="@offer.OfferId" />
+                                            <input type="hidden" name="returnUrl" value="@productUrl" />
+                                            <label class="visually-hidden" for="qty-@offer.OfferId">Quantity</label>
+                                            <input type="number" id="qty-@offer.OfferId" name="quantity" value="1" min="1"
+                                                   max="@Math.Min(10, offer.Available)" class="form-control form-control-sm cart-qty" required />
+                                            <button type="submit" class="btn btn-sm btn-warning">Add to cart</button>
+                                        </form>
+                                    }
+                                    else if (offer.Available > 0 && !isSignedIn)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@productUrl">Sign in to buy</a>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>

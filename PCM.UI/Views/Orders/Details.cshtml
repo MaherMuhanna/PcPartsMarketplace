@@ -1,0 +1,128 @@
+@using PCM.Infrastructure.DTO.Orders
+@model OrderDto
+@{
+    ViewData["Title"] = $"Order {Model.OrderNumber}";
+    var cancellableParts = Model.SellerOrders.Count(s => s.NextStatuses.Contains("Cancelled"));
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">My orders</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.OrderNumber</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-1">Order <span class="font-monospace">@Model.OrderNumber</span></h1>
+        <div class="text-muted small">Placed @Model.CreatedAt.ToDisplayDate() &middot; @Model.SellerOrders.Count shipment(s) &middot; Cash on delivery</div>
+    </div>
+    @if (Model.CanCancel && Model.SellerOrders.Count > 1 && cancellableParts > 0)
+    {
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal"
+                data-action="@Url.Action("Cancel", new { id = Model.Id })"
+                data-title="Cancel every part that has not shipped (@cancellableParts)">Cancel order</button>
+    }
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        @foreach (var part in Model.SellerOrders)
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>Shipment from <strong>@part.StoreName</strong> <span class="badge @part.Status.OrderStatusBadge() ms-1">@part.Status</span></span>
+                    @if (part.NextStatuses.Contains("Cancelled"))
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal"
+                                data-action="@Url.Action("CancelPart", new { id = Model.Id, sellerOrderId = part.Id })"
+                                data-title="Cancel the shipment from @part.StoreName">Cancel this shipment</button>
+                    }
+                </div>
+                <div class="card-body pb-2">
+                    <partial name="_OrderSteps" model="part" />
+                </div>
+                <table class="table mb-0 align-middle">
+                    <tbody>
+                        @foreach (var item in part.Items)
+                        {
+                            <tr>
+                                <td>
+                                    @if (item.ProductSlug is not null)
+                                    {
+                                        <a asp-controller="Products" asp-action="Details" asp-route-slug="@item.ProductSlug" class="text-decoration-none">@item.ProductName</a>
+                                    }
+                                    else
+                                    {
+                                        @item.ProductName
+                                    }
+                                    <span class="badge @(item.Condition == "New" ? "text-bg-primary" : "text-bg-secondary") ms-1">@item.Condition</span>
+                                </td>
+                                <td class="text-end text-nowrap small text-muted">@item.Quantity &times; @item.UnitPrice.ToPrice()</td>
+                                <td class="text-end text-nowrap fw-semibold">@item.LineTotal.ToPrice()</td>
+                            </tr>
+                        }
+                        <tr class="table-light">
+                            <td colspan="2" class="text-end small">Subtotal</td>
+                            <td class="text-end text-nowrap">@part.Subtotal.ToPrice()</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6">Ship to</h2>
+                <p class="mb-0">
+                    <strong>@Model.ShippingAddress.City</strong>, @Model.ShippingAddress.Street<br />
+                    @if (!string.IsNullOrWhiteSpace(Model.ShippingAddress.Details))
+                    {
+                        @Model.ShippingAddress.Details<br />
+                    }
+                    <span class="small text-muted">Phone @Model.ShippingAddress.Phone</span>
+                </p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">Total</h2>
+                <div class="fs-4 fw-semibold">@Model.Total.ToPrice()</div>
+                <p class="small text-muted mb-0">Pay each seller in cash when their shipment arrives. Cancelled shipments are not paid.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* One cancel dialog; the button that opens it sets the form action and title. *@
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content" id="cancelForm">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="cancelModalTitle">Cancel</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Only shipments that have not left the seller can be cancelled. The items go back on sale.</p>
+                <label for="cancelReason" class="form-label">Reason <span class="text-muted small">(optional)</span></label>
+                <input type="text" id="cancelReason" name="reason" class="form-control" maxlength="250" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep my order</button>
+                <button type="submit" class="btn btn-danger">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('cancelModal').addEventListener('show.bs.modal', event => {
+        const trigger = event.relatedTarget;
+        document.getElementById('cancelForm').action = trigger.dataset.action;
+        document.getElementById('cancelModalTitle').textContent = trigger.dataset.title;
+        document.getElementById('cancelReason').value = '';
+    });
+</script>

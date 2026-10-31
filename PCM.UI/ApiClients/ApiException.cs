@@ -1,4 +1,5 @@
 using System.Net;
+using PCM.Infrastructure.DTO.Orders;
 
 namespace PCM.UI.ApiClients;
 
@@ -13,6 +14,9 @@ public sealed class ApiProblem
 
     /// <summary>Validation errors keyed by camelCase field name (400 only).</summary>
     public Dictionary<string, string[]>? Errors { get; init; }
+
+    /// <summary>Changed cart lines of a 409 checkout response (POST /api/v1/orders/checkout only).</summary>
+    public List<CheckoutIssueDto>? Items { get; init; }
 }
 
 /// <summary>A non-success response from the API, with its ProblemDetails when present.</summary>

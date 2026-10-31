@@ -39,13 +39,16 @@
                             {
                                 @if (sellerStatus == "Approved")
                                 {
+                                    <li class="nav-item"><a class="nav-link" asp-controller="SellerOrders" asp-action="Index">Orders</a></li>
                                     <li class="nav-item"><a class="nav-link" asp-controller="SellerOffers" asp-action="Index">My offers</a></li>
                                 }
                                 <li class="nav-item"><a class="nav-link" asp-controller="Store" asp-action="Index">My store</a></li>
                             }
                             @if (User.IsInRole(Roles.Customer))
                             {
+                                <li class="nav-item"><a class="nav-link" asp-controller="Orders" asp-action="Index">My orders</a></li>
                                 <li class="nav-item"><a class="nav-link" asp-controller="Addresses" asp-action="Index">My addresses</a></li>
+                                @await Component.InvokeAsync("CartBadge")
                             }
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">

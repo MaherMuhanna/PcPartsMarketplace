@@ -109,3 +109,26 @@ html {
 .picker-search {
     max-width: 640px;
 }
+
+/* ---- Cart and orders ---- */
+.cart-qty {
+    width: 4.5rem;
+}
+
+.cart-line-total {
+    min-width: 7rem;
+}
+
+.order-steps .step {
+    flex: 1 1 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+    border-top: 4px solid var(--bs-border-color);
+    padding-top: 0.35rem;
+}
+
+.order-steps .step.done {
+    color: var(--bs-body-color);
+    border-top-color: var(--bs-success);
+}

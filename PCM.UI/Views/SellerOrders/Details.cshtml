@@ -1,0 +1,112 @@
+@using PCM.Infrastructure.DTO.Orders
+@model SellerOrderDetailsDto
+@{
+    ViewData["Title"] = $"Order {Model.OrderNumber}";
+    var forward = Model.NextStatuses.Where(s => s != "Cancelled").ToList();
+    var canCancel = Model.NextStatuses.Contains("Cancelled");
+
+    // The same steps view as the customer sees, built from this sub-order.
+    var steps = new SellerOrderDto(Model.Id, 0, string.Empty, Model.Status, Model.Subtotal, Model.CreatedAt, Model.ConfirmedAt,
+        Model.ShippedAt, Model.DeliveredAt, Model.CancelledAt, Model.CancelReason, Model.Items, Model.NextStatuses);
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">Orders</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.OrderNumber</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-1">Order <span class="font-monospace">@Model.OrderNumber</span> <span class="badge @Model.Status.OrderStatusBadge() fs-6 align-middle">@Model.Status</span></h1>
+        <div class="text-muted small">Placed @Model.CreatedAt.ToDisplayDate() &middot; Collect @Model.Subtotal.ToPrice() in cash on delivery</div>
+    </div>
+    <div class="d-flex gap-2">
+        @foreach (var next in forward)
+        {
+            <form asp-action="ChangeStatus" asp-route-id="@Model.Id" method="post">
+                <input type="hidden" name="status" value="@next" />
+                <button type="submit" class="btn btn-primary">@next.OrderActionLabel()</button>
+            </form>
+        }
+        @if (canCancel)
+        {
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#sellerCancelModal">Cancel order</button>
+        }
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-body pb-2">
+                <partial name="_OrderSteps" model="steps" />
+            </div>
+            <table class="table mb-0 align-middle">
+                <thead>
+                    <tr><th>Item to pack</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Total</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td>
+                                @item.ProductName
+                                <span class="badge @(item.Condition == "New" ? "text-bg-primary" : "text-bg-secondary") ms-1">@item.Condition</span>
+                            </td>
+                            <td class="text-end">@item.Quantity</td>
+                            <td class="text-end text-nowrap">@item.UnitPrice.ToPrice()</td>
+                            <td class="text-end text-nowrap fw-semibold">@item.LineTotal.ToPrice()</td>
+                        </tr>
+                    }
+                    <tr class="table-light">
+                        <td colspan="3" class="text-end">Subtotal</td>
+                        <td class="text-end text-nowrap fw-semibold">@Model.Subtotal.ToPrice()</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">Deliver to</h2>
+                <p class="mb-0">
+                    <strong>@Model.CustomerName</strong><br />
+                    @Model.ShippingAddress.City, @Model.ShippingAddress.Street<br />
+                    @if (!string.IsNullOrWhiteSpace(Model.ShippingAddress.Details))
+                    {
+                        @Model.ShippingAddress.Details<br />
+                    }
+                    Phone <a href="tel:@Model.ShippingAddress.Phone">@Model.ShippingAddress.Phone</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (canCancel)
+{
+    <div class="modal fade" id="sellerCancelModal" tabindex="-1" aria-labelledby="sellerCancelTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <form asp-action="ChangeStatus" asp-route-id="@Model.Id" method="post" class="modal-content">
+                <input type="hidden" name="status" value="Cancelled" />
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="sellerCancelTitle">Cancel order @Model.OrderNumber</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">The reserved items go back on sale. The customer sees your reason.</p>
+                    <label for="sellerCancelReason" class="form-label">Reason <span class="text-muted small">(required)</span></label>
+                    <input type="text" id="sellerCancelReason" name="reason" class="form-control" minlength="3" maxlength="250" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Back</button>
+                    <button type="submit" class="btn btn-danger">Cancel order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

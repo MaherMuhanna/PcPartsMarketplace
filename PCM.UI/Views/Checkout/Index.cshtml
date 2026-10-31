@@ -1,0 +1,109 @@
+@model CheckoutViewModel
+@{
+    ViewData["Title"] = "Checkout";
+    var lines = Model.Cart.Sellers.SelectMany(s => s.Items).ToList();
+}
+
+<h1 class="h3 mb-3">Checkout</h1>
+
+@if (Model.Addresses.Count == 0)
+{
+    <div class="alert alert-warning">
+        You need a shipping address before you can order.
+        <a class="alert-link" asp-controller="Addresses" asp-action="Create">Add an address</a>, then come back to checkout.
+    </div>
+    return;
+}
+
+<form asp-action="Place" method="post" id="checkoutForm">
+    @* The lines exactly as shown below. The API compares them with the live cart: any change is reported, nothing is charged by surprise. *@
+    @for (var i = 0; i < lines.Count; i++)
+    {
+        <input type="hidden" name="Items[@i].CartItemId" value="@lines[i].Id" />
+        <input type="hidden" name="Items[@i].UnitPrice" value="@lines[i].UnitPrice" />
+        <input type="hidden" name="Items[@i].Quantity" value="@lines[i].Quantity" />
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <h2 class="h5">1. Shipping address</h2>
+            <div class="list-group mb-4">
+                @foreach (var address in Model.Addresses)
+                {
+                    <label class="list-group-item d-flex gap-2">
+                        <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="AddressId" value="@address.Id"
+                               checked="@(address.Id == Model.SelectedAddressId)" required />
+                        <span>
+                            <strong>@address.City</strong>, @address.Street
+                            @if (!string.IsNullOrWhiteSpace(address.Details))
+                            {
+                                <span class="text-muted">(@address.Details)</span>
+                            }
+                            <span class="d-block small text-muted">Phone @address.Phone @(address.IsDefault ? " · default" : "")</span>
+                        </span>
+                    </label>
+                }
+            </div>
+
+            <h2 class="h5">2. Review items</h2>
+            <p class="small text-muted">Each seller ships their part separately.</p>
+            @foreach (var seller in Model.Cart.Sellers)
+            {
+                <div class="card mb-3">
+                    <div class="card-header">Shipment from <strong>@seller.StoreName</strong></div>
+                    <table class="table mb-0 align-middle">
+                        <tbody>
+                            @foreach (var item in seller.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        @item.ProductName
+                                        <span class="badge @(item.Condition == "New" ? "text-bg-primary" : "text-bg-secondary") ms-1">@item.Condition</span>
+                                    </td>
+                                    <td class="text-end text-nowrap small text-muted">@item.Quantity &times; @item.UnitPrice.ToPrice()</td>
+                                    <td class="text-end text-nowrap fw-semibold">@item.LineTotal.ToPrice()</td>
+                                </tr>
+                            }
+                            <tr class="table-light">
+                                <td colspan="2" class="text-end small">Subtotal</td>
+                                <td class="text-end text-nowrap">@seller.Subtotal.ToPrice()</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            }
+            <a class="small" asp-controller="Cart" asp-action="Index">Change items in your cart</a>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h5">3. Payment</h2>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" id="cod" checked disabled />
+                        <label class="form-check-label" for="cod">Cash on delivery</label>
+                    </div>
+                    <dl class="row mb-3">
+                        <dt class="col-7 fw-normal">Items</dt>
+                        <dd class="col-5 text-end">@Model.Cart.ItemCount</dd>
+                        <dt class="col-7 fw-normal">Shipping</dt>
+                        <dd class="col-5 text-end">Free</dd>
+                        <dt class="col-7">Total to pay</dt>
+                        <dd class="col-5 text-end fw-semibold">@Model.Cart.Total.ToPrice()</dd>
+                    </dl>
+                    <button type="submit" class="btn btn-success w-100" id="placeOrder">Place order</button>
+                    <p class="small text-muted mt-2 mb-0">You pay each seller in cash when their shipment arrives.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    // One click only: a double click would send a second checkout (the API also blocks it: the cart is empty by then).
+    document.getElementById('checkoutForm').addEventListener('submit', () => {
+        const button = document.getElementById('placeOrder');
+        button.disabled = true;
+        button.textContent = 'Placing order...';
+    });
+</script>

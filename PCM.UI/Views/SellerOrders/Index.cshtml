@@ -1,0 +1,70 @@
+@model SellerOrdersViewModel
+@{
+    ViewData["Title"] = "Orders";
+    var orders = Model.Orders;
+}
+
+<h1 class="h3 mb-3">Orders</h1>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in SellerOrdersViewModel.StatusTabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(string.Equals(tab.Value, Model.Status, StringComparison.OrdinalIgnoreCase) ? "active" : "")"
+               asp-action="Index" asp-route-status="@tab.Value">@tab.Label</a>
+        </li>
+    }
+</ul>
+
+<p class="text-muted small">@orders.TotalCount order(s). Newest first.</p>
+
+@if (orders.Items.Count == 0)
+{
+    <div class="alert alert-info">No orders here yet.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Placed</th>
+                    <th>Customer</th>
+                    <th>City</th>
+                    <th class="text-end">Items</th>
+                    <th class="text-end">Subtotal</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders.Items)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@order.Id" class="fw-semibold font-monospace">@order.OrderNumber</a></td>
+                        <td class="small text-nowrap">@order.CreatedAt.ToDisplayDate()</td>
+                        <td>@order.CustomerName</td>
+                        <td>@order.City</td>
+                        <td class="text-end">@order.ItemCount</td>
+                        <td class="text-end text-nowrap">@order.Subtotal.ToPrice()</td>
+                        <td><span class="badge @order.Status.OrderStatusBadge()">@order.Status</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (orders.TotalPages > 1)
+    {
+        <nav aria-label="Order pages">
+            <ul class="pagination">
+                @for (var p = 1; p <= orders.TotalPages; p++)
+                {
+                    <li class="page-item @(p == orders.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-page="@p" asp-route-status="@Model.Status">@p</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+}
