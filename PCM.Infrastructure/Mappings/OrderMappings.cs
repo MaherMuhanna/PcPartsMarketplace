@@ -133,7 +133,7 @@ public static class OrderMappings
         new(row.Id, row.OfferId, row.ProductId, row.ProductName, row.ProductSlug, row.Condition, row.UnitPrice, row.Quantity, row.LineTotal);
 
     public static ShippingAddressDto ToDto(this ShippingAddressRow row) =>
-        new(row.Id, row.City, row.Street, row.Details, row.Phone);
+        new(row.Id, row.RecipientName, row.City, row.Street, row.Details, row.Phone);
 
     private static IReadOnlyList<string> NextStatuses(string status, OrderActor actor) =>
         SellerOrderTransitions.AllowedNext(Enum.Parse<SellerOrderStatus>(status), actor)

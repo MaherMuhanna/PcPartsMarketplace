@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using PCM.UI.ApiClients;
 using PCM.UI.Filters;
+using PCM.UI.Http;
 using PCM.UI.Security;
 using Serilog;
 
@@ -39,6 +40,10 @@ try
     builder.Services.AddAuthorization();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
+
+    // Every API call carries the browser's IP (X-Forwarded-For), so the API rate-limits per user.
+    builder.Services.AddTransient<ClientIpForwardingHandler>();
+    builder.Services.ConfigureHttpClientDefaults(client => client.AddHttpMessageHandler<ClientIpForwardingHandler>());
 
     // ---- Typed API clients via IHttpClientFactory: pooled handlers, no `new HttpClient()` per request ----
     var apiBaseUrl = new Uri(builder.Configuration["Api:BaseUrl"]

@@ -74,7 +74,7 @@
             <div class="card-body">
                 <h2 class="h6">Deliver to</h2>
                 <p class="mb-0">
-                    <strong>@Model.CustomerName</strong><br />
+                    <strong>@Model.ShippingAddress.RecipientName</strong><br />
                     @Model.ShippingAddress.City, @Model.ShippingAddress.Street<br />
                     @if (!string.IsNullOrWhiteSpace(Model.ShippingAddress.Details))
                     {

@@ -1,3 +1,4 @@
+using PCM.API.BackgroundJobs;
 using PCM.API.Filters;
 using PCM.API.Middleware;
 using PCM.API.OpenApi;
@@ -35,6 +36,16 @@ try
     // ---- Identity + JWT bearer auth, role policies, rate limiting on /auth ----
     builder.AddApiAuth();
 
+    // ---- Real client IP behind the MVC UI (X-Forwarded-For from trusted proxies only) ----
+    builder.AddTrustedProxies();
+
+    // ---- Background job: cancel sub-orders a seller never confirmed (releases reserved stock) ----
+    builder.Services.AddOptions<PendingOrderExpiryOptions>()
+        .Bind(builder.Configuration.GetSection(PendingOrderExpiryOptions.SectionName))
+        .ValidateDataAnnotations()
+        .ValidateOnStart();
+    builder.Services.AddHostedService<PendingOrderExpiryJob>();
+
     // ---- Web API ----
     builder.Services.AddControllers(options => options.Filters.Add<FluentValidationFilter>());
 
@@ -59,6 +70,7 @@ try
     var app = builder.Build();
 
     // ---- HTTP pipeline (order matters) ----
+    app.UseForwardedHeaders();              // first: logs, rate limiter and auth see the real client IP
     app.UseExceptionHandler();              // unhandled exceptions -> ProblemDetails
     app.UseStatusCodePages();               // empty 4xx/5xx responses -> ProblemDetails
     app.UseMiddleware<CorrelationIdMiddleware>();

@@ -28,8 +28,8 @@ public sealed record CartLineRow(
 /// <summary>What adding an offer to a cart needs to know about it (null when the offer does not exist or is deleted).</summary>
 public sealed record OfferPurchaseRow(int Id, int SellerId, decimal Price, int Stock, int ReservedStock, bool IsPurchasable);
 
-/// <summary>Shipping address of an order.</summary>
-public sealed record ShippingAddressRow(int Id, string City, string Street, string? Details, string Phone);
+/// <summary>Shipping address of an order: the snapshot taken at checkout. Id is the address-book entry it came from.</summary>
+public sealed record ShippingAddressRow(int Id, string RecipientName, string City, string Street, string? Details, string Phone);
 
 /// <summary>One bought line (snapshot of name and price at checkout).</summary>
 public sealed record OrderItemRow(

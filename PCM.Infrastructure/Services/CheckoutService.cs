@@ -14,6 +14,7 @@ namespace PCM.Infrastructure.Services;
 
 public sealed class CheckoutService(
     IUnitOfWork unitOfWork,
+    CustomerDirectory customers,
     TimeProvider timeProvider,
     ILogger<CheckoutService> logger) : ICheckoutService
 {
@@ -67,6 +68,9 @@ public sealed class CheckoutService(
         var address = await unitOfWork.Addresses.GetOwnedAsync(request.AddressId, userId, cancellationToken)
             ?? throw new RequestValidationException("addressId", "Choose one of your saved addresses.");
 
+        // The recipient is the customer's name at checkout (addresses carry no name of their own in V1).
+        var customer = await customers.GetOneAsync(userId, cancellationToken);
+
         // 3. Re-read every offer (tracked: the reservations below are checked by Offer.RowVersion on save).
         var offerIds = items.Select(i => i.OfferId).Distinct().ToList();
         var offers = (await unitOfWork.Offers.GetForUpdateAsync(offerIds, cancellationToken)).ToDictionary(o => o.Id);
@@ -84,6 +88,12 @@ public sealed class CheckoutService(
         {
             CustomerId = userId,
             ShippingAddressId = address.Id,
+            // Snapshot: the order keeps this address even if the customer edits or deletes it later.
+            ShipRecipientName = customer.FullName,
+            ShipCity = address.City,
+            ShipStreet = address.Street,
+            ShipDetails = address.Details,
+            ShipPhone = address.Phone,
             PaymentMethod = nameof(PaymentMethod.COD)
         };
 

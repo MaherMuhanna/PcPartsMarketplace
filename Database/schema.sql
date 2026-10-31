@@ -444,7 +444,14 @@ CREATE TABLE dbo.[Order]
                                               THEN RIGHT(N'000000' + CAST(Id AS nvarchar(10)), 6)
                                               ELSE CAST(Id AS nvarchar(10)) END AS nvarchar(20))) PERSISTED,
     CustomerId        int               NOT NULL,
-    ShippingAddressId int               NOT NULL,
+    ShippingAddressId int               NOT NULL,     -- the address-book entry the customer picked (reference only)
+    -- Snapshot of the shipping address at checkout: editing or deleting the address later never
+    -- changes where an existing order ships (same idea as the OrderItem name and price snapshot).
+    ShipRecipientName nvarchar(100)     NOT NULL,
+    ShipCity          nvarchar(100)     NOT NULL,
+    ShipStreet        nvarchar(200)     NOT NULL,
+    ShipDetails       nvarchar(200)     NULL,
+    ShipPhone         varchar(20)       NOT NULL,
     Total             decimal(18,2)     NOT NULL,
     PaymentMethod     nvarchar(20)      NOT NULL CONSTRAINT DF_Order_PaymentMethod DEFAULT N'COD',
     CreatedAt         datetime2(3)      NOT NULL CONSTRAINT DF_Order_CreatedAt DEFAULT SYSUTCDATETIME(),
@@ -484,6 +491,8 @@ CREATE TABLE dbo.SellerOrder
 );
 CREATE UNIQUE INDEX UX_SellerOrder_OrderId_SellerId ON dbo.SellerOrder (OrderId, SellerId);
 CREATE INDEX IX_SellerOrder_SellerId_Status ON dbo.SellerOrder (SellerId, Status);
+-- Auto-cancel job: finds old Pending sub-orders without scanning the table.
+CREATE INDEX IX_SellerOrder_Status_CreatedAt ON dbo.SellerOrder (Status, CreatedAt);
 GO
 
 -- OrderItem: append-only snapshot of what was bought, at the price paid.

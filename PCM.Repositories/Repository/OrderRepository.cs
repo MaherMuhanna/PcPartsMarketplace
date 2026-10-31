@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PCM.DomainEntities.Context;
 using PCM.DomainEntities.DBEntities;
+using PCM.DomainEntities.Enums;
 using PCM.Repositories.Common;
 using PCM.Repositories.IRepository;
 using PCM.Repositories.Models;
@@ -58,7 +59,7 @@ public class OrderRepository(PcPartsContext context) : Repository<Order>(context
                 o.PaymentMethod,
                 o.CreatedAt,
                 o.UpdatedAt,
-                new ShippingAddressRow(o.ShippingAddress.Id, o.ShippingAddress.City, o.ShippingAddress.Street, o.ShippingAddress.Details, o.ShippingAddress.Phone),
+                new ShippingAddressRow(o.ShippingAddressId, o.ShipRecipientName, o.ShipCity, o.ShipStreet, o.ShipDetails, o.ShipPhone),
                 o.SellerOrders
                     .OrderBy(s => s.Id)
                     .Select(s => new SellerOrderRow(
@@ -77,7 +78,7 @@ public class OrderRepository(PcPartsContext context) : Repository<Order>(context
                         s.DeliveredAt,
                         s.CancelledAt,
                         s.CancelReason,
-                        new ShippingAddressRow(o.ShippingAddress.Id, o.ShippingAddress.City, o.ShippingAddress.Street, o.ShippingAddress.Details, o.ShippingAddress.Phone),
+                        new ShippingAddressRow(o.ShippingAddressId, o.ShipRecipientName, o.ShipCity, o.ShipStreet, o.ShipDetails, o.ShipPhone),
                         s.OrderItems
                             .OrderBy(i => i.Id)
                             .Select(i => new OrderItemRow(
@@ -179,7 +180,7 @@ public class SellerOrderRepository(PcPartsContext context) : Repository<SellerOr
                 s.Status,
                 s.Subtotal,
                 s.OrderItems.Sum(i => i.Quantity),
-                s.Order.ShippingAddress.City,
+                s.Order.ShipCity,
                 s.CreatedAt))
             .ToListAsync(cancellationToken);
 
@@ -207,11 +208,12 @@ public class SellerOrderRepository(PcPartsContext context) : Repository<SellerOr
                 s.CancelledAt,
                 s.CancelReason,
                 new ShippingAddressRow(
-                    s.Order.ShippingAddress.Id,
-                    s.Order.ShippingAddress.City,
-                    s.Order.ShippingAddress.Street,
-                    s.Order.ShippingAddress.Details,
-                    s.Order.ShippingAddress.Phone),
+                    s.Order.ShippingAddressId,
+                    s.Order.ShipRecipientName,
+                    s.Order.ShipCity,
+                    s.Order.ShipStreet,
+                    s.Order.ShipDetails,
+                    s.Order.ShipPhone),
                 s.OrderItems
                     .OrderBy(i => i.Id)
                     .Select(i => new OrderItemRow(
@@ -234,6 +236,29 @@ public class SellerOrderRepository(PcPartsContext context) : Repository<SellerOr
             .Include(s => s.OrderItems)
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
+
+    public Task<SellerOrder?> GetForUpdateAsync(int id, CancellationToken cancellationToken = default) =>
+        DbSet
+            .Where(s => s.Id == id)
+            .Include(s => s.Order)
+            .Include(s => s.OrderItems)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<int>> GetPendingIdsCreatedBeforeAsync(DateTime createdBefore, int take, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
+
+        const string pending = nameof(SellerOrderStatus.Pending);
+        return await DbSet
+            .AsNoTracking()
+            .Where(s => s.Status == pending && s.CreatedAt < createdBefore)
+            .OrderBy(s => s.CreatedAt)
+            .ThenBy(s => s.Id)
+            .Select(s => s.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
 
     private IQueryable<SellerOrder> History() =>
         DbSet.AsNoTracking().IgnoreQueryFilters([PcPartsContext.SoftDeleteFilter]);

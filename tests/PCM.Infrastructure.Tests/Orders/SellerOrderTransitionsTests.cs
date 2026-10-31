@@ -49,6 +49,17 @@ public sealed class SellerOrderTransitionsTests
         Assert.Equal(new[] { SellerOrderStatus.Delivered }, SellerOrderTransitions.AllowedNext(SellerOrderStatus.Shipped, OrderActor.Seller));
         Assert.Empty(SellerOrderTransitions.AllowedNext(SellerOrderStatus.Delivered, OrderActor.Seller));
     }
+
+    [Fact]
+    public void System_can_only_cancel_a_pending_sub_order()
+    {
+        Assert.Equal(new[] { SellerOrderStatus.Cancelled }, SellerOrderTransitions.AllowedNext(SellerOrderStatus.Pending, OrderActor.System));
+        Assert.Empty(SellerOrderTransitions.AllowedNext(SellerOrderStatus.Confirmed, OrderActor.System));
+        Assert.Throws<ConflictException>(() =>
+            SellerOrderTransitions.EnsureAllowed(SellerOrderStatus.Confirmed, SellerOrderStatus.Cancelled, OrderActor.System));
+        Assert.Throws<ConflictException>(() =>
+            SellerOrderTransitions.EnsureAllowed(SellerOrderStatus.Pending, SellerOrderStatus.Confirmed, OrderActor.System));
+    }
 }
 
 public sealed class SellerOrderWorkflowTests
@@ -97,6 +108,23 @@ public sealed class SellerOrderWorkflowTests
         Assert.Equal((10, 0), (offers[1].Stock, offers[1].ReservedStock));
         Assert.Equal((4, 0), (offers[2].Stock, offers[2].ReservedStock));
         Assert.All(offers.Values, o => Assert.Equal("Release", Assert.Single(o.StockMovements).Reason));
+    }
+
+    [Fact]
+    public void System_cancel_releases_stock_without_a_user()
+    {
+        var (subOrder, offers) = Arrange(SellerOrderStatus.Pending);
+
+        SellerOrderWorkflow.Apply(subOrder, offers, SellerOrderStatus.Cancelled, OrderActor.System,
+            PendingOrderExpiry.ReasonFor(3), userId: null, Now);
+
+        Assert.Equal("System: Not confirmed within 3 days", subOrder.CancelReason);
+        Assert.Equal((10, 0), (offers[1].Stock, offers[1].ReservedStock));
+        Assert.All(offers.Values, o =>
+        {
+            var movement = Assert.Single(o.StockMovements);
+            Assert.Equal(("Release", (int?)null, "Cancelled by system"), (movement.Reason, movement.CreatedByUserId, movement.Note));
+        });
     }
 
     [Fact]

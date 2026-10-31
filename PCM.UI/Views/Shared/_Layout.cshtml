@@ -37,9 +37,13 @@
                             }
                             @if (User.IsInRole(Roles.Seller))
                             {
-                                @if (sellerStatus == "Approved")
+                                @* A suspended seller cannot sell, but still finishes the orders they accepted. *@
+                                @if (sellerStatus is "Approved" or "Suspended")
                                 {
                                     <li class="nav-item"><a class="nav-link" asp-controller="SellerOrders" asp-action="Index">Orders</a></li>
+                                }
+                                @if (sellerStatus == "Approved")
+                                {
                                     <li class="nav-item"><a class="nav-link" asp-controller="SellerOffers" asp-action="Index">My offers</a></li>
                                 }
                                 <li class="nav-item"><a class="nav-link" asp-controller="Store" asp-action="Index">My store</a></li>

@@ -8,7 +8,10 @@ public enum OrderActor
 {
     Customer,
     Seller,
-    Admin
+    Admin,
+
+    /// <summary>The background job that cancels sub-orders a seller never confirmed (no user behind it).</summary>
+    System
 }
 
 /// <summary>
@@ -19,7 +22,8 @@ public enum OrderActor
 /// Confirmed --> Cancelled
 /// </code>
 /// Delivered and Cancelled are final. Sellers and admins may make every move; customers may only
-/// cancel. Any other combination is a 409 Conflict.
+/// cancel; the system may only cancel a Pending sub-order (auto-cancel of unconfirmed orders).
+/// Any other combination is a 409 Conflict.
 /// </summary>
 public static class SellerOrderTransitions
 {
@@ -34,7 +38,12 @@ public static class SellerOrderTransitions
 
     /// <summary>True when <paramref name="actor"/> may move a sub-order from <paramref name="from"/> to <paramref name="to"/>.</summary>
     public static bool IsAllowed(SellerOrderStatus from, SellerOrderStatus to, OrderActor actor) =>
-        Next[from].Contains(to) && (actor != OrderActor.Customer || to == SellerOrderStatus.Cancelled);
+        Next[from].Contains(to) && actor switch
+        {
+            OrderActor.Customer => to == SellerOrderStatus.Cancelled,
+            OrderActor.System => from == SellerOrderStatus.Pending && to == SellerOrderStatus.Cancelled,
+            _ => true
+        };
 
     /// <summary>The statuses the actor can move to from <paramref name="from"/> (drives the buttons in the UI).</summary>
     public static IReadOnlyList<SellerOrderStatus> AllowedNext(SellerOrderStatus from, OrderActor actor) =>
@@ -50,6 +59,11 @@ public static class SellerOrderTransitions
         if (IsAllowed(from, to, actor))
         {
             return;
+        }
+
+        if (actor == OrderActor.System)
+        {
+            throw new ConflictException($"Only unconfirmed (Pending) orders are cancelled automatically; this one is {from}.");
         }
 
         if (to == SellerOrderStatus.Cancelled)
