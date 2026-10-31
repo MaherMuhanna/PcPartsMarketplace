@@ -31,6 +31,12 @@ public interface IUnitOfWork
 
     IStockMovementRepository StockMovements { get; }
 
+    ICartRepository Carts { get; }
+
+    IOrderRepository Orders { get; }
+
+    ISellerOrderRepository SellerOrders { get; }
+
     /// <summary>Persists all staged changes in one round trip; returns rows affected.</summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

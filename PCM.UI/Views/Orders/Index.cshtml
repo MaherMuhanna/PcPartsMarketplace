@@ -1,0 +1,62 @@
+@model OrdersViewModel
+@{
+    ViewData["Title"] = "My orders";
+    var orders = Model.Orders;
+}
+
+<h1 class="h3 mb-3">My orders</h1>
+
+@if (orders.Items.Count == 0)
+{
+    <div class="alert alert-info">
+        You have not ordered anything yet. <a class="alert-link" asp-controller="Catalog" asp-action="Index">Browse the catalog</a>.
+    </div>
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Order</th>
+                <th>Placed</th>
+                <th class="text-end">Items</th>
+                <th class="text-end">Total</th>
+                <th>Status per seller</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in orders.Items)
+            {
+                <tr>
+                    <td><a asp-action="Details" asp-route-id="@order.Id" class="fw-semibold font-monospace">@order.OrderNumber</a></td>
+                    <td class="small text-nowrap">@order.CreatedAt.ToDisplayDate()</td>
+                    <td class="text-end">@order.ItemCount</td>
+                    <td class="text-end text-nowrap">@order.Total.ToPrice()</td>
+                    <td>
+                        @foreach (var part in order.SellerOrders)
+                        {
+                            <span class="d-inline-block me-2 small">
+                                @part.StoreName <span class="badge @part.Status.OrderStatusBadge()">@part.Status</span>
+                            </span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (orders.TotalPages > 1)
+{
+    <nav aria-label="Order pages">
+        <ul class="pagination">
+            @for (var p = 1; p <= orders.TotalPages; p++)
+            {
+                <li class="page-item @(p == orders.Page ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@p">@p</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

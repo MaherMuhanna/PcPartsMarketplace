@@ -28,3 +28,13 @@ public sealed class RequestValidationException(IReadOnlyDictionary<string, strin
     {
     }
 }
+
+/// <summary>
+/// Checkout found lines that changed since the customer reviewed them (price, stock, availability,
+/// or the cart itself). 409 with the affected lines in the ProblemDetails extension "items".
+/// </summary>
+public sealed class CheckoutConflictException(string message, IReadOnlyList<DTO.Orders.CheckoutIssueDto> items)
+    : Exception(message)
+{
+    public IReadOnlyList<DTO.Orders.CheckoutIssueDto> Items { get; } = items;
+}

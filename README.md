@@ -2,7 +2,7 @@
 
 Multi-vendor marketplace for computer parts (RAM, GPUs, CPUs, storage): an ASP.NET Core Web API plus an ASP.NET Core MVC frontend, on SQL Server with EF Core (Database-First), Repository + Unit of Work.
 
-> Status: **Phase 4 (Offers and inventory)** in progress. See the roadmap below.
+> Status: **Phase 5 (Cart and checkout)** in progress. See the roadmap below.
 
 ## Tech stack
 
@@ -63,9 +63,9 @@ Created on API startup when the environment is Development (`Seed:DemoUsers`). P
 | seller1@pcm.local | Seller | Store "Tech Hub", Approved; 24 offers (some low or out of stock) and one Pending and one Rejected product proposal |
 | seller2@pcm.local | Seller | Store "Byte Corner", Pending (shows the review banner) |
 | seller3@pcm.local | Seller | Store "Circuit Store", Approved; 12 offers on the same products as Tech Hub at different prices |
-| customer@pcm.local | Customer | Has one default address |
+| customer@pcm.local | Customer | One default address, 5 demo orders (Pending split between two sellers, Confirmed, Shipped, Delivered, Cancelled) and 2 items in the cart |
 
-The demo proposals and offers need the catalog from `seed.sql`; if the API started before you ran it, restart the API. Seeding is idempotent: a seller who already has offers is skipped.
+The demo proposals and offers need the catalog from `seed.sql`; if the API started before you ran it, restart the API. Seeding is idempotent: a seller who already has offers is skipped, and demo orders are skipped once the customer has any order. Demo orders go through the real cart, checkout and status services, so their stock reservations and movements are real.
 
 ## Run with Docker (one command)
 
@@ -161,6 +161,29 @@ One master product, many seller offers: each approved seller sells a catalog pro
 - **Low stock** means available stock at or below the seller's own threshold (default 5).
 - The MVC UI has "My offers" (stock tabs, filters, stock modal, history) and a "Sell this" button on product pages for approved sellers.
 
+## Cart, checkout and orders
+
+One cart per customer; lines reference offers (not products) and always show the current price and stock. Checkout creates one order with one sub-order per seller, paid cash on delivery.
+
+| Endpoint | Who | Notes |
+| --- | --- | --- |
+| `GET /api/v1/cart`, `GET /api/v1/cart/summary` | Customer | Lines grouped by seller, issues per line (`Unavailable`, `InsufficientStock`), totals, `canCheckout` |
+| `POST /api/v1/cart/items` | Customer | `{ offerId, quantity }`; adding the same offer again increases the line |
+| `PUT /api/v1/cart/items/{id}`, `DELETE /api/v1/cart/items/{id}`, `DELETE /api/v1/cart` | Customer | Quantity 1 to 10 and not above available stock |
+| `POST /api/v1/orders/checkout` | Customer | `{ addressId, items: [{ cartItemId, unitPrice, quantity }] }` as shown to the customer; 201 + order |
+| `GET /api/v1/orders`, `GET /api/v1/orders/{id}` | Customer | Own orders only (404 otherwise) |
+| `POST /api/v1/orders/{id}/cancel`, `POST /api/v1/orders/{id}/seller-orders/{sellerOrderId}/cancel` | Customer | Whole order or one seller's part; Pending or Confirmed only |
+| `GET /api/v1/seller/orders`, `GET /api/v1/seller/orders/{id}` | Approved seller | Own sub-orders; `status` filter |
+| `PATCH /api/v1/seller/orders/{id}/status` | Approved seller | `{ status, reason }`: Confirmed, Shipped, Delivered, or Cancelled with a reason |
+| `GET /api/v1/admin/orders`, `GET /api/v1/admin/orders/{id}` | Admin | `status`, `q` (order number) |
+| `PATCH /api/v1/admin/orders/{id}/seller-orders/{sellerOrderId}/status` | Admin | Same moves as sellers |
+
+- **Transactional checkout**: one `IUnitOfWork` transaction locks the cart row (a double click waits, then finds the cart empty), re-reads every offer, compares price, quantity, availability and stock with what the customer saw, creates the order and sub-orders, reserves the stock (`Reserve` movements) and empties the cart. Any difference returns 409 with an `items` list of the changed lines (`PriceChanged`, `InsufficientStock`, `Unavailable`, `CartChanged`).
+- **Concurrency**: `Offer.RowVersion` and `SellerOrder.RowVersion` are concurrency tokens. A conflict (or a SQL Server deadlock at checkout) is retried once on fresh data, then 409.
+- **Sub-order flow**: `Pending -> Confirmed -> Shipped -> Delivered`; `Cancelled` only from Pending or Confirmed. Delivered sells the stock (Stock and ReservedStock drop); Cancelled releases it. Every change writes a `StockMovement` linked to the sub-order. The cancel reason records who cancelled (`Customer: ...`, `Seller: ...`, `Admin: ...`).
+- **Snapshots**: order lines keep the product name, condition and price at checkout.
+- The MVC UI has "Add to cart" on product pages, the cart, checkout, "My orders" with cancel, and "Orders" for sellers (status tabs and next-step buttons). Admin order pages come in Phase 6 (use Scalar).
+
 ## Design decisions (so far)
 
 - **Database-First from a versioned script**: the schema is reviewed as SQL (types, constraints, filtered indexes) and the entities are generated from it.
@@ -175,7 +198,7 @@ One master product, many seller offers: each approved seller sells a catalog pro
 1. ~~Foundation~~ ✔
 2. ~~Auth: Identity, JWT + refresh tokens, roles, seller approval~~ ✔
 3. ~~Catalog: categories, specs, products, search and filters, seed data~~ ✔
-4. Offers and inventory (in progress)
-5. Cart and transactional checkout
+4. ~~Offers and inventory: seller offers, stock movements, low stock~~ ✔
+5. Cart and transactional checkout (in progress)
 6. MVC UI
 7. Polish: tests, caching, diagrams, screenshots

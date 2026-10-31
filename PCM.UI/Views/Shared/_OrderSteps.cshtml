@@ -1,0 +1,35 @@
+@using PCM.Infrastructure.DTO.Orders
+@model SellerOrderDto
+@*
+    Progress of one sub-order: Pending -> Confirmed -> Shipped -> Delivered, with the time of each step.
+    A cancelled sub-order shows when and why instead.
+*@
+@if (Model.Status == "Cancelled")
+{
+    <div class="small text-danger">
+        Cancelled @Model.CancelledAt?.ToDisplayDate()
+        @if (!string.IsNullOrWhiteSpace(Model.CancelReason))
+        {
+            <span class="text-muted">(@Model.CancelReason)</span>
+        }
+    </div>
+}
+else
+{
+    var steps = new (string Label, DateTime? At)[]
+    {
+        ("Placed", Model.CreatedAt),
+        ("Confirmed", Model.ConfirmedAt),
+        ("Shipped", Model.ShippedAt),
+        ("Delivered", Model.DeliveredAt)
+    };
+    <div class="d-flex gap-2 order-steps">
+        @foreach (var step in steps)
+        {
+            <div class="step @(step.At is null ? "" : "done")">
+                @step.Label
+                <div class="small">@(step.At?.ToDisplayDate() ?? " ")</div>
+            </div>
+        }
+    </div>
+}

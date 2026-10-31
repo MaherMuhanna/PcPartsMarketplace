@@ -13,4 +13,29 @@ public static class DisplayExtensions
 
     public static string ToPrice(this decimal amount) =>
         $"{Currency} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
+
+    /// <summary>Dates are stored in UTC and shown the same way on every page.</summary>
+    public static string ToDisplayDate(this DateTime value) =>
+        value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+
+    /// <summary>Bootstrap badge colour of a sub-order status.</summary>
+    public static string OrderStatusBadge(this string status) => status switch
+    {
+        "Pending" => "text-bg-secondary",
+        "Confirmed" => "text-bg-info",
+        "Shipped" => "text-bg-primary",
+        "Delivered" => "text-bg-success",
+        "Cancelled" => "text-bg-danger",
+        _ => "text-bg-light"
+    };
+
+    /// <summary>Button text for moving a sub-order to <paramref name="status"/>.</summary>
+    public static string OrderActionLabel(this string status) => status switch
+    {
+        "Confirmed" => "Confirm order",
+        "Shipped" => "Mark as shipped",
+        "Delivered" => "Mark as delivered (cash received)",
+        "Cancelled" => "Cancel",
+        _ => status
+    };
 }
