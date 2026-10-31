@@ -40,6 +40,7 @@ try
     builder.Services.AddAuthorization();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
+    builder.Services.AddSingleton<PCM.UI.Demo.DemoAccounts>();
 
     // Every API call carries the browser's IP (X-Forwarded-For), so the API rate-limits per user.
     builder.Services.AddTransient<ClientIpForwardingHandler>();
@@ -67,6 +68,11 @@ try
     builder.Services.AddHttpClient<ICartApiClient, CartApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
     builder.Services.AddHttpClient<IOrdersApiClient, OrdersApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
     builder.Services.AddHttpClient<ISellerOrdersApiClient, SellerOrdersApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
+    builder.Services.AddHttpClient<IDashboardApiClient, DashboardApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
+    builder.Services.AddHttpClient<IAdminCatalogApiClient, AdminCatalogApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
+    builder.Services.AddHttpClient<IAdminProductsApiClient, AdminProductsApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
+    builder.Services.AddHttpClient<ISellerProposalsApiClient, SellerProposalsApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
+    builder.Services.AddHttpClient<IAdminOrdersApiClient, AdminOrdersApiClient>(ConfigureApiClient).AddHttpMessageHandler<ApiTokenHandler>();
 
     var app = builder.Build();
 

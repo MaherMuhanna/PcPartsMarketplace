@@ -1,0 +1,125 @@
+@model SellerDashboardViewModel
+@{
+    ViewData["Title"] = "Seller dashboard";
+    var profile = Model.Profile;
+    var d = Model.Dashboard;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-0">@profile.StoreName</h1>
+        <div class="text-muted small">Seller dashboard</div>
+    </div>
+    @if (d is not null)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-primary" asp-controller="SellerOffers" asp-action="Create">Add offer</a>
+            <a class="btn btn-sm btn-outline-secondary" asp-controller="SellerProposals" asp-action="Create">Propose a product</a>
+        </div>
+    }
+</div>
+
+@if (d is null)
+{
+    @* Not approved: explain the status instead of showing numbers the API would refuse. *@
+    var (css, title, text) = profile.Status switch
+    {
+        "Pending" => ("border-warning", "Your store is under review", "An admin is checking your store. Once it is approved you can add offers, propose products and receive orders."),
+        "Suspended" => ("border-danger", "Your store is suspended", "Your offers are hidden and you cannot sell. You can still confirm, ship and deliver the orders you already accepted."),
+        "Rejected" => ("border-secondary", "Your application was rejected", "This store cannot sell on the marketplace."),
+        _ => ("border-secondary", $"Status: {profile.Status}", "")
+    };
+
+    <div class="card @css">
+        <div class="card-body">
+            <h2 class="h5">@title</h2>
+            <p class="mb-2">@text</p>
+            @if (!string.IsNullOrEmpty(profile.StatusReason))
+            {
+                <p class="mb-2"><span class="text-muted">Reason:</span> @profile.StatusReason</p>
+            }
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm btn-outline-primary" asp-controller="Store" asp-action="Index">My store details</a>
+                @if (profile.Status == "Suspended")
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-controller="SellerOrders" asp-action="Index">Open orders</a>
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    var s = d.SubOrdersByStatus;
+
+    <h2 class="h6 text-uppercase text-muted mb-2">Orders to handle</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <partial name="_StatCard" model="@(new StatCardViewModel("To confirm", s.Pending.ToString(),
+                Url.Action("Index", "SellerOrders", new { status = "Pending" }), "new orders", s.Pending > 0))" />
+        </div>
+        <div class="col-6 col-lg-3">
+            <partial name="_StatCard" model="@(new StatCardViewModel("To ship", s.Confirmed.ToString(),
+                Url.Action("Index", "SellerOrders", new { status = "Confirmed" }), "confirmed", s.Confirmed > 0))" />
+        </div>
+        <div class="col-6 col-lg-3">
+            <partial name="_StatCard" model="@(new StatCardViewModel("On the way", s.Shipped.ToString(),
+                Url.Action("Index", "SellerOrders", new { status = "Shipped" }), "collect cash on delivery"))" />
+        </div>
+        <div class="col-6 col-lg-3">
+            <partial name="_StatCard" model="@(new StatCardViewModel("Delivered sales, last 30 days", d.DeliveredSalesLast30Days.ToPrice(),
+                Url.Action("Index", "SellerOrders", new { status = "Delivered" }), $"{d.DeliveredOrdersLast30Days} order(s)", ValueCss: "text-success"))" />
+        </div>
+    </div>
+
+    <h2 class="h6 text-uppercase text-muted mb-2">Inventory</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-4">
+            <partial name="_StatCard" model="@(new StatCardViewModel("Offers", d.OfferCount.ToString(),
+                Url.Action("Index", "SellerOffers")))" />
+        </div>
+        <div class="col-4">
+            <partial name="_StatCard" model="@(new StatCardViewModel("Low stock", d.LowStockCount.ToString(),
+                Url.Action("Index", "SellerOffers", new { stock = "low" }), "at or below the alert level", d.LowStockCount > 0))" />
+        </div>
+        <div class="col-4">
+            <partial name="_StatCard" model="@(new StatCardViewModel("Out of stock", d.OutOfStockCount.ToString(),
+                Url.Action("Index", "SellerOffers", new { stock = "out" }), "customers cannot buy", ValueCss: d.OutOfStockCount > 0 ? "text-danger" : null))" />
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 text-uppercase text-muted mb-0">Recent orders</h2>
+        <a class="small" asp-controller="SellerOrders" asp-action="Index">All orders</a>
+    </div>
+    @if (d.RecentSubOrders.Count == 0)
+    {
+        <div class="alert alert-light border">No orders yet. Customers see your offers on the product pages.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Status</th>
+                        <th>Placed (UTC)</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in d.RecentSubOrders)
+                    {
+                        <tr>
+                            <td><a class="font-monospace" asp-controller="SellerOrders" asp-action="Details" asp-route-id="@order.Id">@order.OrderNumber</a></td>
+                            <td><span class="badge @order.Status.OrderStatusBadge()">@order.Status</span></td>
+                            <td class="small">@order.CreatedAt.ToDisplayDate()</td>
+                            <td class="text-end">@order.Subtotal.ToPrice()</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}

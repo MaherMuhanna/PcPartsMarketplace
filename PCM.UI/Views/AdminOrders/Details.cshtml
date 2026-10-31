@@ -1,0 +1,151 @@
+@using PCM.Infrastructure.DTO.Orders
+@model OrderDto
+@{
+    ViewData["Title"] = $"Order {Model.OrderNumber}";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">Orders</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.OrderNumber</li>
+    </ol>
+</nav>
+
+<div class="mb-3">
+    <h1 class="h3 mb-1">Order <span class="font-monospace">@Model.OrderNumber</span></h1>
+    <div class="text-muted small">
+        Placed @Model.CreatedAt.ToDisplayDate() (UTC) &middot; @Model.SellerOrders.Count shipment(s) &middot; Cash on delivery
+        @if (Model.UpdatedAt is { } updated)
+        {
+            <span>&middot; Last change @updated.ToDisplayDate()</span>
+        }
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        @foreach (var part in Model.SellerOrders)
+        {
+            var forward = part.NextStatuses.Where(s => s != "Cancelled").ToList();
+            var canCancel = part.NextStatuses.Contains("Cancelled");
+
+            <div class="card mb-3">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>Shipment from <strong>@part.StoreName</strong> <span class="badge @part.Status.OrderStatusBadge() ms-1">@part.Status</span></span>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var next in forward)
+                        {
+                            <form asp-action="ChangeStatus" asp-route-id="@Model.Id" asp-route-sellerOrderId="@part.Id" method="post"
+                                  data-confirm="@($"{next.OrderActionLabel()} for {part.StoreName}? Admins act on the seller's behalf.")">
+                                <input type="hidden" name="status" value="@next" />
+                                <button type="submit" class="btn btn-sm btn-outline-primary">@next.OrderActionLabel()</button>
+                            </form>
+                        }
+                        @if (canCancel)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#adminCancelModal"
+                                    data-action="@Url.Action("ChangeStatus", new { id = Model.Id, sellerOrderId = part.Id })"
+                                    data-title="Cancel the shipment from @part.StoreName">Cancel</button>
+                        }
+                    </div>
+                </div>
+                <div class="card-body pb-2">
+                    <partial name="_OrderSteps" model="part" />
+                </div>
+                <table class="table mb-0 align-middle">
+                    <tbody>
+                        @foreach (var item in part.Items)
+                        {
+                            <tr>
+                                <td>
+                                    @if (item.ProductSlug is not null)
+                                    {
+                                        <a asp-controller="Products" asp-action="Details" asp-route-slug="@item.ProductSlug" class="text-decoration-none">@item.ProductName</a>
+                                    }
+                                    else
+                                    {
+                                        @item.ProductName
+                                    }
+                                    <span class="badge @(item.Condition == "New" ? "text-bg-primary" : "text-bg-secondary") ms-1">@item.Condition</span>
+                                </td>
+                                <td class="text-end text-nowrap small text-muted">@item.Quantity &times; @item.UnitPrice.ToPrice()</td>
+                                <td class="text-end text-nowrap fw-semibold">@item.LineTotal.ToPrice()</td>
+                            </tr>
+                        }
+                        <tr class="table-light">
+                            <td colspan="2" class="text-end small">Subtotal</td>
+                            <td class="text-end text-nowrap">@part.Subtotal.ToPrice()</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6">Customer</h2>
+                <p class="mb-0">
+                    <strong>@Model.Customer?.FullName</strong><br />
+                    <span class="small text-muted">@Model.Customer?.Email</span>
+                </p>
+            </div>
+        </div>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6">Ship to</h2>
+                <p class="mb-0">
+                    <strong>@Model.ShippingAddress.RecipientName</strong><br />
+                    @Model.ShippingAddress.City, @Model.ShippingAddress.Street<br />
+                    @if (!string.IsNullOrWhiteSpace(Model.ShippingAddress.Details))
+                    {
+                        @Model.ShippingAddress.Details<br />
+                    }
+                    <span class="small text-muted">Phone @Model.ShippingAddress.Phone</span>
+                </p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">Total</h2>
+                <div class="fs-4 fw-semibold">@Model.Total.ToPrice()</div>
+                <p class="small text-muted mb-0">Sum of all shipments as ordered. Each seller collects their part in cash on delivery.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* One cancel dialog; the button that opens it sets the form action and title. Admin cancels need a reason. *@
+<div class="modal fade" id="adminCancelModal" tabindex="-1" aria-labelledby="adminCancelTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content" id="adminCancelForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="status" value="Cancelled" />
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="adminCancelTitle">Cancel</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">The reserved items go back on sale. The customer and the seller see the reason.</p>
+                <label for="adminCancelReason" class="form-label">Reason <span class="text-muted small">(required)</span></label>
+                <input type="text" id="adminCancelReason" name="reason" class="form-control" minlength="3" maxlength="250" required />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Back</button>
+                <button type="submit" class="btn btn-danger">Cancel shipment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('adminCancelModal').addEventListener('show.bs.modal', event => {
+            const trigger = event.relatedTarget;
+            document.getElementById('adminCancelForm').action = trigger.dataset.action;
+            document.getElementById('adminCancelTitle').textContent = trigger.dataset.title;
+            document.getElementById('adminCancelReason').value = '';
+        });
+    </script>
+}
