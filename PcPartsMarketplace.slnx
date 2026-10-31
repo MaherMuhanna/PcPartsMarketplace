@@ -13,6 +13,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/PCM.API.IntegrationTests/PCM.API.IntegrationTests.csproj" />
     <Project Path="tests/PCM.Infrastructure.Tests/PCM.Infrastructure.Tests.csproj" />
+    <Project Path="tests/PCM.UI.Tests/PCM.UI.Tests.csproj" />
   </Folder>
   <Project Path="PCM.DomainEntities/PCM.DomainEntities.csproj" />
   <Project Path="PCM.Repositories/PCM.Repositories.csproj" />
