@@ -1,0 +1,16 @@
+@model ProductFormViewModel
+@{
+    ViewData["Title"] = "Add product";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">Products</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Add product</li>
+    </ol>
+</nav>
+
+<h1 class="h3 mb-1">Add product</h1>
+<p class="text-muted small">Products added by an admin are approved and visible in the catalog right away. Sellers then add offers to them.</p>
+
+<partial name="_ProductForm" model="Model" />

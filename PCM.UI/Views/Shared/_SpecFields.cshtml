@@ -1,0 +1,68 @@
+@model SpecFieldsModel
+@* Spec inputs of the product form, one per attribute of the chosen category. Rendered with the form
+   and again (alone) by ProductFormController when the category changes. Inputs are named Specs[i].*
+   in render order: the controller maps API errors such as specs[1].optionId back to these rows. *@
+@{
+    var modelState = ViewData.ModelState;
+}
+@if (!Model.CategoryChosen)
+{
+    <p class="text-muted small mb-0">Choose a category to see its specs.</p>
+}
+else if (Model.Fields.Count == 0)
+{
+    <p class="text-muted small mb-0">This category has no spec attributes.</p>
+}
+else
+{
+    <div class="row g-3">
+        @for (var i = 0; i < Model.Fields.Count; i++)
+        {
+            var field = Model.Fields[i];
+            var id = $"spec{i}";
+            var errors = modelState.ErrorsFor($"Specs[{i}]");
+            var invalid = errors.Count > 0 ? "is-invalid" : "";
+
+            <div class="col-md-6">
+                <input type="hidden" name="Specs[@i].AttributeId" value="@field.AttributeId" />
+                <label class="form-label small mb-1" for="@id">
+                    @field.Name
+                    @if (field.IsRequired)
+                    {
+                        <span class="text-danger" title="Required">*</span>
+                    }
+                </label>
+                @switch (field.DataType)
+                {
+                    case "Number":
+                        <div class="input-group input-group-sm has-validation">
+                            <input id="@id" name="Specs[@i].NumberValue" type="number" step="any" min="0" max="1000000000"
+                                   value="@(field.NumberValue?.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture))"
+                                   class="form-control @invalid" required="@field.IsRequired" />
+                            @if (field.Unit is not null)
+                            {
+                                <span class="input-group-text">@field.Unit</span>
+                            }
+                        </div>
+                        break;
+                    case "Enum":
+                        <select id="@id" name="Specs[@i].OptionId" class="form-select form-select-sm @invalid" required="@field.IsRequired">
+                            <option value="">@(field.IsRequired ? "Choose..." : "(not set)")</option>
+                            @foreach (var option in field.Options)
+                            {
+                                <option value="@option.Id" selected="@(option.Id == field.OptionId)">@option.Value</option>
+                            }
+                        </select>
+                        break;
+                    default:
+                        <input id="@id" name="Specs[@i].TextValue" value="@field.TextValue" maxlength="200" class="form-control form-control-sm @invalid" required="@field.IsRequired" />
+                        break;
+                }
+                @foreach (var error in errors)
+                {
+                    <div class="text-danger small">@error</div>
+                }
+            </div>
+        }
+    </div>
+}

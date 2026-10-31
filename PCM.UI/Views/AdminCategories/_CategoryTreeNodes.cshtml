@@ -1,0 +1,22 @@
+@model CategoryTreeNodesModel
+@* One level of the admin category tree; renders itself for the children. *@
+<ul class="category-tree">
+    @foreach (var node in Model.Nodes.OrderBy(n => n.SortOrder).ThenBy(n => n.Name))
+    {
+        var isSelected = node.Id == Model.SelectedId;
+        <li>
+            <a class="tree-row d-flex justify-content-between align-items-center text-decoration-none @(isSelected ? "bg-primary text-white" : "text-body")"
+               asp-action="Index" asp-route-id="@node.Id" aria-current="@(isSelected ? "true" : null)">
+                <span>@node.Name</span>
+                @if (node.IsLeaf)
+                {
+                    <span class="badge @(isSelected ? "text-bg-light" : "text-bg-secondary") fw-normal">leaf</span>
+                }
+            </a>
+            @if (node.Children.Count > 0)
+            {
+                <partial name="_CategoryTreeNodes" model="@(new CategoryTreeNodesModel(node.Children, Model.SelectedId))" />
+            }
+        </li>
+    }
+</ul>

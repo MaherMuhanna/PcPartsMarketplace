@@ -1,0 +1,45 @@
+@model PCM.Infrastructure.DTO.Catalog.ProductManageDto
+@{
+    ViewData["Title"] = Model.Name;
+    var image = Model.Images.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url ?? DisplayExtensions.PlaceholderImage;
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">Product proposals</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Name</li>
+    </ol>
+</nav>
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+            <img src="@image" alt="" class="offer-thumb-lg border rounded" />
+            <div class="flex-grow-1">
+                <div class="small text-muted">@Model.BrandName &middot; @Model.CategoryName</div>
+                <h1 class="h4 mb-1">@Model.Name <partial name="_ProductStatusBadge" model="Model.Status" /></h1>
+                <div class="small text-muted font-monospace">@Model.ModelNumber</div>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-primary" asp-controller="SellerOffers" asp-action="Create" asp-route-productId="@Model.Id">Add my offer</a>
+                @if (Model.IsActive)
+                {
+                    <a class="btn btn-outline-secondary" asp-controller="Products" asp-action="Details" asp-route-slug="@Model.Slug">View in catalog</a>
+                }
+            </div>
+        </div>
+        <p class="small text-muted">Approved: this is a catalog product now, so only an admin can change it.</p>
+
+        @if (Model.Specs.Count > 0)
+        {
+            <table class="table table-sm mb-0">
+                <tbody>
+                    @foreach (var spec in Model.Specs)
+                    {
+                        <tr><th class="fw-normal text-muted w-50">@spec.Name</th><td>@spec.DisplayValue</td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

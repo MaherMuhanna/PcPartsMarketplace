@@ -1,0 +1,62 @@
+@model SellerProposalsViewModel
+@{
+    ViewData["Title"] = "Product proposals";
+    var proposals = Model.Proposals;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h1 class="h3 mb-0">Product proposals</h1>
+    <a class="btn btn-primary" asp-action="Create">Propose a product</a>
+</div>
+<p class="text-muted small">Can't find a part in the catalog? Propose it. An admin reviews it; once approved it joins the catalog and you can add your offer.</p>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in SellerProposalsViewModel.StatusTabs)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(tab == Model.Status ? "active" : "")" asp-action="Index" asp-route-status="@tab" asp-route-sort="@Model.Sort">@(tab ?? "All")</a>
+        </li>
+    }
+</ul>
+
+@if (proposals.Items.Count == 0)
+{
+    <div class="alert alert-info">No proposals here.</div>
+}
+else
+{
+    <div class="list-group mb-3">
+        @foreach (var proposal in proposals.Items)
+        {
+            <div class="list-group-item">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                    <div>
+                        <a asp-action="Edit" asp-route-id="@proposal.Id" class="fw-semibold text-decoration-none">@proposal.Name</a>
+                        <partial name="_ProductStatusBadge" model="proposal.Status" />
+                        <div class="small text-muted">@proposal.BrandName &middot; <span class="font-monospace">@proposal.ModelNumber</span> &middot; @proposal.CategoryName &middot; sent @proposal.CreatedAt.ToDisplayDate()</div>
+                        @if (proposal.Status == "Rejected" && !string.IsNullOrEmpty(proposal.ReviewNote))
+                        {
+                            <div class="small mt-1"><span class="text-danger">Admin note:</span> @proposal.ReviewNote</div>
+                        }
+                    </div>
+                    <div class="d-flex gap-2">
+                        @switch (proposal.Status)
+                        {
+                            case "Approved":
+                                <a class="btn btn-sm btn-outline-primary" asp-controller="SellerOffers" asp-action="Create" asp-route-productId="@proposal.Id">Add my offer</a>
+                                break;
+                            case "Rejected":
+                                <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@proposal.Id">Fix and resend</a>
+                                break;
+                            default:
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@proposal.Id">Edit</a>
+                                break;
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <partial name="_Pager" model="@PagerViewModel.Create(proposals.Page, proposals.TotalPages, "Index", new { status = Model.Status, sort = Model.Sort })" />
+}

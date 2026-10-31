@@ -38,4 +38,23 @@ public static class ModelStateExtensions
             : exception.UserMessage);
         return true;
     }
+
+    /// <summary>
+    /// Messages of <paramref name="key"/> and of its sub-keys ("Specs[2]" also returns "Specs[2].OptionId",
+    /// but not "Specs[20]"). Keys are compared ignoring case, like ModelState itself.
+    /// For list rows whose errors may be attached to the row or to one of its fields.
+    /// </summary>
+    public static IReadOnlyList<string> ErrorsFor(this ModelStateDictionary modelState, string key)
+    {
+        ArgumentNullException.ThrowIfNull(modelState);
+
+        return [.. modelState
+            .Where(entry => entry.Value is not null)
+            .Where(entry => entry.Key.Equals(key, StringComparison.OrdinalIgnoreCase)
+                || (entry.Key.StartsWith(key, StringComparison.OrdinalIgnoreCase) && entry.Key.Length > key.Length && entry.Key[key.Length] == '.'))
+            .SelectMany(entry => entry.Value!.Errors)
+            .Select(error => error.ErrorMessage)
+            .Where(message => !string.IsNullOrEmpty(message))
+            .Distinct()];
+    }
 }

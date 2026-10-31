@@ -1,0 +1,3 @@
+@model string
+@* Badge of a master product's review status. *@
+<span class="badge @(Model switch { "Approved" => "text-bg-success", "Pending" => "text-bg-warning", "Rejected" => "text-bg-danger", _ => "text-bg-secondary" })">@Model</span>

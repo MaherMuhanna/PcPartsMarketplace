@@ -1,0 +1,16 @@
+@model ProductFormViewModel
+@{
+    ViewData["Title"] = "Propose a product";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a asp-action="Index">Product proposals</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Propose a product</li>
+    </ol>
+</nav>
+
+<h1 class="h3 mb-1">Propose a product</h1>
+<p class="text-muted small">Search the catalog first: if the part is already there, <a asp-controller="SellerOffers" asp-action="Create">add an offer</a> to it instead. A proposal describes the part itself; your price and stock come later, in your offer.</p>
+
+<partial name="_ProductForm" model="Model" />

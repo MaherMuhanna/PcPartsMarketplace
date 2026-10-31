@@ -23,7 +23,7 @@
     if (results.Items.Count == 0)
     {
         <div class="alert alert-light border">
-            No catalog product matches "@Model.Q". If it is missing from the catalog, propose it as a new product (admin review).
+            No catalog product matches "@Model.Q". If it is missing from the catalog, <a class="alert-link" asp-controller="SellerProposals" asp-action="Create">propose it as a new product</a> (admin review).
         </div>
     }
     else

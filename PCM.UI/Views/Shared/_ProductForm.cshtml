@@ -1,0 +1,224 @@
+@model ProductFormViewModel
+@*
+    Shared product form: admin products (create/edit) and seller proposals (create/edit).
+    - Category: leaf categories only. Changing it loads that category's spec inputs (ProductFormController);
+      on an existing product it first asks, because the specs are replaced as a whole on save.
+    - Images: up to 8 URL rows with a live preview; rows are renumbered on submit so removed rows leave no gaps.
+    The posting controller is the current one (Create or Edit action).
+*@
+@{
+    var imageListErrors = ViewData.ModelState.TryGetValue("Images", out var imagesEntry) ? imagesEntry!.Errors.Select(e => e.ErrorMessage).ToList() : [];
+    var specListErrors = ViewData.ModelState.TryGetValue("Specs", out var specsEntry) ? specsEntry!.Errors.Select(e => e.ErrorMessage).ToList() : [];
+    var hasOffersHint = Model.Mode == ProductFormMode.Admin && Model.IsEdit;
+    var specFieldsUrl = Url.Action("SpecFields", "ProductForm");
+}
+
+<form asp-action="@(Model.IsEdit ? "Edit" : "Create")" asp-route-id="@Model.Id" method="post" novalidate id="productForm"
+      data-spec-url="@specFieldsUrl" data-is-edit="@(Model.IsEdit ? "true" : "false")">
+    <partial name="_FormErrors" />
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Product</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" class="form-select" data-current="@Model.CategoryId">
+                        <option value="0">Choose a category...</option>
+                        @foreach (var category in Model.Categories)
+                        {
+                            <option value="@category.Node.Id" selected="@(category.Node.Id == Model.CategoryId)">@category.PathText</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                    @if (hasOffersHint)
+                    {
+                        <div class="form-text">Changing the category clears the specs (fill them in again). Sellers' offers stay on the product.</div>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="BrandId" class="form-label"></label>
+                    <select asp-for="BrandId" class="form-select">
+                        <option value="0">Choose a brand...</option>
+                        @foreach (var brand in Model.Brands)
+                        {
+                            <option value="@brand.Id" selected="@(brand.Id == Model.BrandId)">@brand.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="BrandId" class="text-danger small"></span>
+                    @if (Model.Mode == ProductFormMode.Seller)
+                    {
+                        <div class="form-text">Brand missing? Mention it in the description; an admin can add it.</div>
+                    }
+                </div>
+                <div class="col-md-8">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" maxlength="200" placeholder="e.g. Corsair Vengeance 32GB DDR5 6000" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="ModelNumber" class="form-label"></label>
+                    <input asp-for="ModelNumber" class="form-control font-monospace" maxlength="100" placeholder="Manufacturer part number" />
+                    <span asp-validation-for="ModelNumber" class="text-danger small"></span>
+                    <div class="form-text">Unique per brand.</div>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="4" maxlength="4000"></textarea>
+                    <span asp-validation-for="Description" class="text-danger small"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-1">Specs</h2>
+            <p class="small text-muted">Fields marked <span class="text-danger">*</span> are required. Empty optional fields are left out.</p>
+            @foreach (var message in specListErrors)
+            {
+                <div class="alert alert-danger py-1 small">@message</div>
+            }
+            <div id="specFields" aria-live="polite">
+                <partial name="_SpecFields" model="@(new SpecFieldsModel(Model.Specs, Model.CategoryId > 0))" />
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 class="h6 mb-0">Images</h2>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="addImage">Add image</button>
+            </div>
+            <p class="small text-muted">Up to @ImageRowViewModel.MaxImages images. Use an <code>https://</code> link or a site path such as <code>/images/products/ram.svg</code>. The first image is the main one.</p>
+            @foreach (var message in imageListErrors)
+            {
+                <div class="alert alert-danger py-1 small">@message</div>
+            }
+            <div id="imageRows" data-max="@ImageRowViewModel.MaxImages">
+                @for (var i = 0; i < Model.Images.Count; i++)
+                {
+                    var image = Model.Images[i];
+                    var errors = ViewData.ModelState.ErrorsFor($"Images[{i}]");
+                    <div class="image-row d-flex gap-2 align-items-start mb-2">
+                        <img src="@(image.IsPreviewable ? image.Url : DisplayExtensions.PlaceholderImage)" alt="" class="image-row-preview border rounded" data-placeholder="@DisplayExtensions.PlaceholderImage" />
+                        <div class="flex-grow-1">
+                            <div class="row g-2">
+                                <div class="col-md-7">
+                                    <input name="Images[@i].Url" value="@image.Url" class="form-control form-control-sm @(errors.Count > 0 ? "is-invalid" : "")" maxlength="500" placeholder="Image URL" aria-label="Image URL" data-image-url />
+                                </div>
+                                <div class="col-md-5">
+                                    <input name="Images[@i].AltText" value="@image.AltText" class="form-control form-control-sm" maxlength="200" placeholder="Alt text (optional)" aria-label="Alt text" />
+                                </div>
+                            </div>
+                            @foreach (var error in errors)
+                            {
+                                <div class="text-danger small">@error</div>
+                            }
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-remove-image aria-label="Remove image">&times;</button>
+                    </div>
+                }
+            </div>
+            <template id="imageRowTemplate">
+                <div class="image-row d-flex gap-2 align-items-start mb-2">
+                    <img src="@DisplayExtensions.PlaceholderImage" alt="" class="image-row-preview border rounded" data-placeholder="@DisplayExtensions.PlaceholderImage" />
+                    <div class="flex-grow-1">
+                        <div class="row g-2">
+                            <div class="col-md-7">
+                                <input name="Images[0].Url" class="form-control form-control-sm" maxlength="500" placeholder="Image URL" aria-label="Image URL" data-image-url />
+                            </div>
+                            <div class="col-md-5">
+                                <input name="Images[0].AltText" class="form-control form-control-sm" maxlength="200" placeholder="Alt text (optional)" aria-label="Alt text" />
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-remove-image aria-label="Remove image">&times;</button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">@(Model.IsEdit ? "Save changes" : Model.Mode == ProductFormMode.Seller ? "Submit for review" : "Create product")</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+    </div>
+</form>
+
+<script>
+    (function () {
+        'use strict';
+        const form = document.getElementById('productForm');
+        const category = document.getElementById('CategoryId');
+        const specFields = document.getElementById('specFields');
+        const rows = document.getElementById('imageRows');
+        const addButton = document.getElementById('addImage');
+        const max = parseInt(rows.dataset.max, 10);
+
+        // ---- Category -> spec fields ----
+        category.addEventListener('change', async () => {
+            const previous = category.dataset.current;
+            if (form.dataset.isEdit === 'true' && previous !== '0'
+                && !window.confirm('Change the category? The specs of the current category are cleared and must be filled in again.')) {
+                category.value = previous;
+                return;
+            }
+            category.dataset.current = category.value;
+            try {
+                const response = await fetch(form.dataset.specUrl + '?categoryId=' + encodeURIComponent(category.value), {
+                    headers: { 'X-Requested-With': 'fetch' }
+                });
+                if (!response.ok) { throw new Error(response.status); }
+                specFields.innerHTML = await response.text();
+            } catch {
+                specFields.innerHTML = '<div class="alert alert-warning small mb-0">Could not load the specs of this category. Save to try again.</div>';
+            }
+        });
+
+        // ---- Image rows ----
+        // Same rule as the API: http(s) URL, or a site path that starts with "/" and a letter or digit.
+        const isImageUrl = value => /^https?:\/\/\S+$/i.test(value) || /^\/[A-Za-z0-9][A-Za-z0-9\/._-]*$/.test(value);
+
+        const syncAddButton = () => { addButton.disabled = rows.querySelectorAll('.image-row').length >= max; };
+
+        rows.addEventListener('input', event => {
+            if (!event.target.matches('[data-image-url]')) { return; }
+            const preview = event.target.closest('.image-row').querySelector('img');
+            const value = event.target.value.trim();
+            preview.src = isImageUrl(value) ? value : preview.dataset.placeholder;
+        });
+
+        rows.addEventListener('click', event => {
+            const button = event.target.closest('[data-remove-image]');
+            if (!button) { return; }
+            button.closest('.image-row').remove();
+            syncAddButton();
+        });
+
+        addButton.addEventListener('click', () => {
+            if (rows.querySelectorAll('.image-row').length >= max) { return; }
+            rows.appendChild(document.getElementById('imageRowTemplate').content.cloneNode(true));
+            syncAddButton();
+            rows.querySelector('.image-row:last-child [data-image-url]').focus();
+        });
+
+        // A broken image link shows the placeholder instead of a broken icon.
+        rows.addEventListener('error', event => {
+            if (event.target.tagName === 'IMG' && !event.target.src.endsWith(event.target.dataset.placeholder)) {
+                event.target.src = event.target.dataset.placeholder;
+            }
+        }, true);
+
+        // Renumber Images[i] so the server binds every row (model binding stops at a gap).
+        form.addEventListener('submit', () => {
+            rows.querySelectorAll('.image-row').forEach((row, index) => {
+                row.querySelectorAll('input[name^="Images["]').forEach(input => {
+                    input.name = input.name.replace(/^Images\[\d+\]/, 'Images[' + index + ']');
+                });
+            });
+        });
+
+        syncAddButton();
+    })();
+</script>

@@ -41,6 +41,7 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<PCM.UI.Demo.DemoAccounts>();
+    builder.Services.AddScoped<PCM.UI.Catalog.ProductFormBuilder>();
 
     // Every API call carries the browser's IP (X-Forwarded-For), so the API rate-limits per user.
     builder.Services.AddTransient<ClientIpForwardingHandler>();
