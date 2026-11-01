@@ -46,12 +46,32 @@ jobs:
             --results-directory TestResults 2>&1 | tee test.log \
             || { grep -iE "\[FAIL\]|failed |error|exception" test.log | sort -u | head -30 | sed 's/^/::error::/'; exit 1; }
 
+      # One merged report for the layers that hold the logic (services, rules, repositories).
+      # Unit and integration tests both count: the integration tests host the real API in-process.
+      - name: Coverage report
+        uses: danielpalme/ReportGenerator-GitHub-Action@5
+        with:
+          reports: TestResults/**/coverage.cobertura.xml
+          targetdir: CoverageReport
+          reporttypes: Cobertura;MarkdownSummaryGithub;Html
+          assemblyfilters: +PCM.Infrastructure;+PCM.Repositories
+          title: PC Parts Marketplace coverage
+
+      # Requirement: 70%+ line coverage on services and repositories. The gate sits at 80% (actual is ~87%)
+      # so a pull request that drops a chunk of tests fails CI instead of quietly eroding coverage.
+      - name: Coverage gate (80% lines, Infrastructure + Repositories)
+        run: |
+          cat CoverageReport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/coverage_gate.py CoverageReport/Cobertura.xml 80
+
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage
-          path: TestResults/**/coverage.cobertura.xml
+          path: |
+            TestResults/**/coverage.cobertura.xml
+            CoverageReport/
           if-no-files-found: ignore
 
   # Proves Database/schema.sql runs cleanly (and idempotently) on SQL Server 2025,

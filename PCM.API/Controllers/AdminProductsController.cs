@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PCM.API.Caching;
 using PCM.Infrastructure.DTO.Catalog;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.Security;
@@ -14,6 +15,7 @@ namespace PCM.API.Controllers;
 [ApiController]
 [Route("api/v1/admin/products")]
 [Authorize(Policy = Policies.AdminOnly)]
+[InvalidatesCatalogCache(CatalogCacheScope.Products)]
 public sealed class AdminProductsController(IProductAdminService productAdminService) : ControllerBase
 {
     /// <summary>Lists products. Filter by status (Pending = review queue), categoryId or keyword q.</summary>

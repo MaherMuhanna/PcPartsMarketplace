@@ -1,4 +1,5 @@
 using PCM.API.BackgroundJobs;
+using PCM.API.Caching;
 using PCM.API.Filters;
 using PCM.API.Middleware;
 using PCM.API.OpenApi;
@@ -45,6 +46,9 @@ try
         .ValidateDataAnnotations()
         .ValidateOnStart();
     builder.Services.AddHostedService<PendingOrderExpiryJob>();
+
+    // ---- Output cache for public catalog reads, evicted by tag on every catalog-changing write ----
+    builder.AddCatalogCaching();
 
     // ---- Web API ----
     builder.Services.AddControllers(options => options.Filters.Add<FluentValidationFilter>());
@@ -93,6 +97,7 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.UseRateLimiter();
+    app.UseOutputCache();                   // after auth: only [OutputCache] endpoints (public catalog) are cached
 
     app.MapControllers();
     app.MapHealthChecks("/health");

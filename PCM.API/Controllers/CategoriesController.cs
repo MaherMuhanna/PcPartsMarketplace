@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
+using PCM.API.Caching;
 using PCM.Infrastructure.DTO.Catalog;
 using PCM.Infrastructure.Services;
 
@@ -7,6 +9,7 @@ namespace PCM.API.Controllers;
 /// <summary>Public, read-only category tree and category attributes.</summary>
 [ApiController]
 [Route("api/v1/categories")]
+[OutputCache(PolicyName = CachePolicies.Catalog)]
 public sealed class CategoriesController(ICategoryService categoryService) : ControllerBase
 {
     /// <summary>The whole tree. Products attach to leaves (isLeaf = true).</summary>

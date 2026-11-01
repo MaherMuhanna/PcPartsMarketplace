@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PCM.API.Caching;
 using PCM.API.Security;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.DTO.Offers;
@@ -15,6 +16,7 @@ namespace PCM.API.Controllers;
 [ApiController]
 [Route("api/v1/seller/offers")]
 [Authorize(Policy = Policies.ApprovedSeller)]
+[InvalidatesCatalogCache(CatalogCacheScope.Products)]
 public sealed class SellerOffersController(ISellerOfferService offerService) : ControllerBase
 {
     [HttpGet]

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PCM.API.Caching;
 using PCM.API.Security;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.DTO.Orders;
@@ -12,6 +13,7 @@ namespace PCM.API.Controllers;
 [ApiController]
 [Route("api/v1/admin/orders")]
 [Authorize(Policy = Policies.AdminOnly)]
+[InvalidatesCatalogCache(CatalogCacheScope.Products)] // cancel releases stock
 public sealed class AdminOrdersController(IAdminOrderService orderService) : ControllerBase
 {
     /// <summary>Filter by sub-order status and part of the order number; newest first by default.</summary>
