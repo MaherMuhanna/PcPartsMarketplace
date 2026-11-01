@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Options;
+using PCM.API.Caching;
 using PCM.Infrastructure.Orders;
 
 namespace PCM.API.BackgroundJobs;
@@ -33,6 +34,7 @@ public sealed class PendingOrderExpiryOptions
 public sealed class PendingOrderExpiryJob(
     IServiceScopeFactory scopeFactory,
     IOptions<PendingOrderExpiryOptions> options,
+    CatalogCacheInvalidator catalogCache,
     ILogger<PendingOrderExpiryJob> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -60,7 +62,13 @@ public sealed class PendingOrderExpiryJob(
             // DbContext and the unit of work are scoped: one fresh scope per run.
             await using var scope = scopeFactory.CreateAsyncScope();
             var expiry = scope.ServiceProvider.GetRequiredService<PendingOrderExpiry>();
-            await expiry.CancelExpiredAsync(settings.PendingDays, settings.BatchSize, stoppingToken);
+            var cancelled = await expiry.CancelExpiredAsync(settings.PendingDays, settings.BatchSize, stoppingToken);
+
+            // Cancelling released reserved stock: product pages and "in stock" filters must show it.
+            if (cancelled > 0)
+            {
+                await catalogCache.EvictAsync(CatalogCacheScope.Products, CancellationToken.None);
+            }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {

@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
+using PCM.API.Caching;
 using PCM.Infrastructure.DTO.Brands;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.Services;
@@ -8,6 +10,7 @@ namespace PCM.API.Controllers;
 /// <summary>Catalog brands. Phase 1 exposes the paged list as an end-to-end pipeline check.</summary>
 [ApiController]
 [Route("api/v1/brands")]
+[OutputCache(PolicyName = CachePolicies.Catalog)]
 public sealed class BrandsController(IBrandService brandService) : ControllerBase
 {
     /// <summary>Lists brands, paged and sorted.</summary>

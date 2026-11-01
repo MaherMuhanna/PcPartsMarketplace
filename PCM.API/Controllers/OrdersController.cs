@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using PCM.API.Caching;
 using PCM.API.Security;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.DTO.Orders;
@@ -13,6 +14,7 @@ namespace PCM.API.Controllers;
 [ApiController]
 [Route("api/v1/orders")]
 [Authorize(Policy = Policies.CustomerOnly)]
+[InvalidatesCatalogCache(CatalogCacheScope.Products)] // checkout reserves and cancel releases stock
 public sealed class OrdersController(ICheckoutService checkoutService, ICustomerOrderService orderService) : ControllerBase
 {
     /// <summary>

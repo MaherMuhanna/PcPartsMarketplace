@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PCM.API.Caching;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.DTO.Sellers;
 using PCM.Infrastructure.Security;
@@ -15,6 +16,7 @@ namespace PCM.API.Controllers;
 [ApiController]
 [Route("api/v1/admin/sellers")]
 [Authorize(Policy = Policies.AdminOnly)]
+[InvalidatesCatalogCache(CatalogCacheScope.Products)] // suspend/reinstate hides/shows offers
 public sealed class AdminSellersController(ISellerAdminService sellerAdminService) : ControllerBase
 {
     /// <summary>Lists sellers, optionally by status. Sort: newest (default), oldest, storeName.</summary>

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PCM.API.Caching;
 using PCM.API.Security;
 using PCM.Infrastructure.DTO.Common;
 using PCM.Infrastructure.DTO.Orders;
@@ -15,6 +16,7 @@ namespace PCM.API.Controllers;
 [ApiController]
 [Route("api/v1/seller/orders")]
 [Authorize(Policy = Policies.SellerCanFulfil)]
+[InvalidatesCatalogCache(CatalogCacheScope.Products)] // cancel releases stock
 public sealed class SellerOrdersController(ISellerOrderService orderService) : ControllerBase
 {
     [HttpGet]

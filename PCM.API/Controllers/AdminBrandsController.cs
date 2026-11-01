@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PCM.API.Caching;
 using PCM.Infrastructure.DTO.Brands;
 using PCM.Infrastructure.Security;
 using PCM.Infrastructure.Services;
@@ -10,6 +11,7 @@ namespace PCM.API.Controllers;
 [ApiController]
 [Route("api/v1/admin/brands")]
 [Authorize(Policy = Policies.AdminOnly)]
+[InvalidatesCatalogCache(CatalogCacheScope.All)]
 public sealed class AdminBrandsController(IBrandService brandService) : ControllerBase
 {
     [HttpPost]

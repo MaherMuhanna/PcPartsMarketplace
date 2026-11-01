@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
+using PCM.API.Caching;
 using PCM.Infrastructure.Catalog;
 using PCM.Infrastructure.DTO.Catalog;
 using PCM.Infrastructure.DTO.Common;
@@ -9,6 +11,7 @@ namespace PCM.API.Controllers;
 /// <summary>Public catalog: search with filters, sidebar data and product pages. Only approved, active products.</summary>
 [ApiController]
 [Route("api/v1/products")]
+[OutputCache(PolicyName = CachePolicies.Products)]
 public sealed class ProductsController(IProductCatalogService catalogService) : ControllerBase
 {
     /// <summary>Spec filters beyond this count are ignored (protects the query from huge URLs).</summary>
