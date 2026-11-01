@@ -1,0 +1,9 @@
+{
+  "name": "pcm-screenshots",
+  "private": true,
+  "description": "Captures the README screenshots from a running docker compose stack.",
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}

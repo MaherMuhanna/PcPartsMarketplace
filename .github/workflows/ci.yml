@@ -57,15 +57,16 @@ jobs:
           assemblyfilters: +PCM.Infrastructure;+PCM.Repositories
           title: PC Parts Marketplace coverage
 
-      # Requirement: 70%+ line coverage on services and repositories. Below that, CI fails.
-      - name: Coverage gate (70% lines, Infrastructure + Repositories)
+      # Requirement: 70%+ line coverage on services and repositories. The gate sits at 80% (actual is ~87%)
+      # so a pull request that drops a chunk of tests fails CI instead of quietly eroding coverage.
+      - name: Coverage gate (80% lines, Infrastructure + Repositories)
         run: |
           cat CoverageReport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
-          python3 scripts/coverage_gate.py CoverageReport/Cobertura.xml 70
+          python3 scripts/coverage_gate.py CoverageReport/Cobertura.xml 80
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage
           path: |
