@@ -28,8 +28,13 @@
 
             <div class="mb-3">
                 <label asp-for="Price" class="form-label"></label>
-                @* step="any": the arrows move by 1, typing still accepts cents (the API enforces 2 decimals). *@
-                <input asp-for="Price" class="form-control" type="number" step="any" min="0.01" max="999999.99" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
+                @* Own −/+ buttons instead of the browser spinner: they move the price by exactly 1 JOD and keep the cents
+                   (9.75 -> 10.75). See data-price-input in wwwroot/js/site.js. The API still enforces 0.01 to 999,999.99, 2 decimals. *@
+                <div class="input-group">
+                    <button type="button" class="btn btn-outline-secondary" data-step-by="-1" aria-label="Decrease price by 1">&minus;</button>
+                    <input asp-for="Price" class="form-control text-end" type="text" inputmode="decimal" autocomplete="off" data-price-input data-min="0.01" data-max="999999.99" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
+                    <button type="button" class="btn btn-outline-secondary" data-step-by="1" aria-label="Increase price by 1">+</button>
+                </div>
                 <span asp-validation-for="Price" class="text-danger small"></span>
             </div>
 
