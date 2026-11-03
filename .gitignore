@@ -430,3 +430,10 @@ FodyWeavers.xsd
 # Local secrets and runtime output
 .env
 logs/
+
+# graphify: keep the shared graph outputs, ignore the local cache and machine-specific files
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/manifest.json
+graphify-out/cost.json
